@@ -23,9 +23,10 @@ def do_indexing(documents_directory, dictionary_file, postings_file):
 Preprocess a text string in the following order:
     1. Sentence tokenize via sent_tokenize
     2. Word tokenize via word_tokenize
-    3. Filter out stopwords from tokenized words
-    4. Stem the remaining non-stopwords
-    5. Return the list of sentences, where each sentence is a list of words
+    3. Do case folding on each word token
+    4. Filter out stopwords from word tokens
+    5. Stem the remaining non-stopwords
+    6. Return the list of sentences, where each sentence is a list of words
 '''
 def get_preprocessed(text):
     return list(map(
@@ -33,7 +34,10 @@ def get_preprocessed(text):
             lambda nonstopword: stemmer.stem(nonstopword),
             filter(
                 lambda word: word not in stopwords,
-                word_tokenize(sentence)))),
+                map(
+                    lambda token: token.lower(),
+                    word_tokenize(sentence)
+                )))),
         sent_tokenize(text)))
 
 def usage():
