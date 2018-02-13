@@ -4,6 +4,8 @@ import nltk
 import sys
 import getopt
 import os
+import string
+import bisect
 
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -13,32 +15,46 @@ with open('stopwords.txt') as f:
     stopwords = set(map(lambda ln: ln.strip(), f.readlines()))
 
 def do_indexing(documents_directory, dictionary_file, postings_file):
+    dictionary = set()
+    postings = {}
+    seen = {}
     for root, directories, files in os.walk(documents_directory):
-        for file_name in files:
-            with open(os.path.join(root, file_name)) as f:
-                text = f.read()
-                print(get_preprocessed(text))
+        for posting in files:
+            with open(os.path.join(root, posting)) as f:
+                text = get_preprocessed(f.read())
+                dictionary.update(text)
+                for word in text:
+                    posting = int(posting)
+                    if word not in postings:
+                        postings[word] = [posting]
+                        seen[word] = set((posting,))
+                    else:
+                        if posting not in seen[word]:
+                            bisect.insort(postings[word], posting)
+                            seen[word].add(posting)
+    print(postings)
 
 '''
 Preprocess a text string in the following order:
     1. Sentence tokenize via sent_tokenize
-    2. Word tokenize via word_tokenize
-    3. Do case folding on each word token
-    4. Filter out stopwords from word tokens
-    5. Stem the remaining non-stopwords
-    6. Return the list of sentences, where each sentence is a list of words
+    2. Word tokenize via word_tokenize and remove duplicates via set()
+    3. Do case folding on each token
+    4. Filter out punctuations, non-alphabetical words, and stopwords from the tokens
+    5. Stem the remaining words
+    6. Return a flattened set of stemmed words
 '''
 def get_preprocessed(text):
-    return list(map(
+    sentences = map(
         lambda sentence: list(map(
             lambda nonstopword: stemmer.stem(nonstopword),
             filter(
-                lambda word: word not in stopwords,
+                lambda word: word not in string.punctuation and word.isalpha() and word not in stopwords,
                 map(
                     lambda token: token.lower(),
-                    word_tokenize(sentence)
+                    set(word_tokenize(sentence))
                 )))),
-        sent_tokenize(text)))
+        sent_tokenize(text))
+    return set((word for words in sentences for word in words))
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' -i directory-of-documents -d dictionary-file -p postings-file')
