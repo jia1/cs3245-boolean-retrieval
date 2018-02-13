@@ -1,8 +1,8 @@
 #!/usr/bin/python
-import re
 import nltk
 import sys
 import getopt
+
 import os
 import string
 import bisect
