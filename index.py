@@ -22,10 +22,10 @@ Create a dictionary[stem] -> sorted([postings]) and write to the dictionary and 
     - dictionary is a dictionary whose keys are stems and whose values are sorted posting lists
     - postings will then be converted into a skip list with sqrt(postings.length) skip pointers 
 '''
-def do_indexing(documents_directory, dictionary_file, postings_file):
+def do_indexing(documents_directory_name, dictionary_file_name, postings_file_name):
     dictionary = {}
     seen_postings_by_stem = {}
-    for root, directories, files in os.walk(documents_directory):
+    for root, directories, files in os.walk(documents_directory_name):
         for posting in files:
             with open(os.path.join(root, posting)) as f:
                 text = get_preprocessed(f.read())
@@ -38,11 +38,9 @@ def do_indexing(documents_directory, dictionary_file, postings_file):
                         if posting not in seen_postings_by_stem[stem]:
                             bisect.insort(dictionary[stem], posting)
                             seen_postings_by_stem[stem].add(posting)
-    stems = dictionary.keys()
-    with open(dictionary_file, 'w') as d:
-        d.write('\n'.join(stems))
-    with open(postings_file, 'wb') as p:
-        for stem in stems:
+    with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
+        for stem in dictionary:
+            d.write('{stem},{offset}\n'.format(stem=stem, offset=p.tell()))
             postings = SkipList()
             postings.build_from(dictionary[stem])
             pickle.dump(postings, p)

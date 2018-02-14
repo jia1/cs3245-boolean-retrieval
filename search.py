@@ -3,8 +3,36 @@ import nltk
 import sys
 import getopt
 
-def do_searching(dictionary_file, postings_file, queries_file, output_file):
+import pickle
+
+from skip_list import SkipList
+
+dictionary = {}
+offsets = {}
+
+def load_next(dictionary_file_object, postings_file_object):
+    global dictionary
+    stem = dictionary_file_object.readline().strip()
+    postings = SkipList()
+    try:
+        postings = pickle.load(postings_file_object)
+    except EOFError:
+        pass
+    dictionary[stem] = (postings.get_length(), postings)
+
+def load_stem(stem, postings_file_object):
     pass
+
+def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
+    with open(dictionary_file_name) as d, open(postings_file_name, 'rb') as p, \
+        open(queries_file_name) as q, open(output_file_name, 'w') as o:
+        for line in d:
+            stem, offset = line.rstrip().split(',')
+        # Resolve queries here
+        '''
+        if dictionary[stem] is None:
+            load_stem(stem, postings_file_object)
+        '''
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results')
