@@ -39,9 +39,14 @@ class SkipList:
             self.length = length
         return self.length
 
+    def reset(self):
+        self.head = None
+        self.last = None
+        self.length = 0
+
     def build_from(self, sorted_list):
         if not sorted_list:
-            return set_node(None)
+            return self.reset()
         self.length = len(sorted_list)
         step = round(sqrt(self.length - 1))
         nodes = list(map(

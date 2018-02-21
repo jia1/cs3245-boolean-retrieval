@@ -5,6 +5,9 @@ import getopt
 
 import pickle
 
+from nltk.stem import PorterStemmer
+stemmer = PorterStemmer()
+
 from skip_list import SkipList
 
 dictionary = {}
@@ -18,14 +21,25 @@ def load_next(dictionary_file_object, postings_file_object):
     stem = dictionary_file_object.readline().strip()
     postings = SkipList()
     try:
-        postings = pickle.load(postings_file_object)
+        # postings = pickle.load(postings_file_object)
+        postings.build_from(pickle.load(postings_file_object))
     except EOFError:
         pass
     dictionary[stem] = (postings.get_length(), postings)
 
 def load_stem(stem, postings_file_object):
-    postings_file_object.seek(offsets[stem])
-    return pickle.load(postings_file_object)
+    global dictionary
+    postings = SkipList()
+    if stem in offsets:
+        postings_file_object.seek(offsets[stem])
+        postings.build_from(pickle.load(postings_file_object))
+    dictionary[stem] = (postings.get_length(), postings)
+    return postings
+
+def peek(stack, error='Peek from empty stack'):
+    if not stack:
+        sys.exit(error)
+    return stack[-1]
 
 def tokenize(expression):
     final_tokens = []
@@ -43,48 +57,7 @@ def tokenize(expression):
         final_tokens.extend(inner_tokens)
     return final_tokens
 
-def merge(skip_list_a, skip_list_b):
-    merged_skip_list_data = []
-    node_a = skip_list_a.get_head()
-    node_b = skip_list_b.get_head()
-    while node_a is not None and node_b is not None:
-        data_a = node_a.get_data()
-        data_b = node_b.get_data()
-        if data_a == data_b:
-            merged_skip_list_data.append(data_a)
-            node_a = node_a.get_next()
-            node_b = node_b.get_next()
-        else:
-            if data_a < data_b:
-                skip_node_a = node_a.get_skip()
-                if skip_node_a is not None and skip_node_a.get_data() <= data_b:
-                    node_a = skip_node_a
-                else:
-                    node_a = node_a.get_next()
-            else: # data_b < data_a
-                skip_node_b = node_b.get_skip()
-                if skip_node_b is not None and skip_node_b.get_data() <= data_a:
-                    node_b = skip_node_b
-                else:
-                    node_b = node_b.get_next()
-    merged_skip_list = SkipList()
-    merged_skip_list.build_from(merged_skip_list_data)
-    print(merged_skip_list_data)
-    return merged_skip_list
-
-def union(skip_list_a, skip_list_b):
-    pass
-
-def negate(skip_list):
-    pass
-
-def peek(stack, error='Peek from empty stack'):
-    if not stack:
-        sys.exit(error)
-    return stack[-1]
-
-def shunting_yard(expression):
-    tokens = tokenize(expression)
+def shunting_yard(tokens):
     output_queue = []
     operator_stack = []
     for token in tokens:
@@ -115,7 +88,76 @@ def shunting_yard(expression):
     return output_queue
 
 def parse_query(query_string):
-    return shunting_yard(query_string)
+    query_tokens = tokenize(query_string)
+    postfix_query = shunting_yard(query_tokens)
+    stemmed_postfix_query = []
+    stems = set()
+    for token in postfix_query:
+        if token in operators or token == '(' or token == ')':
+            stemmed_postfix_query.append(token)
+        else:
+            stem = stemmer.stem(token)
+            stems.add(stem)
+            stemmed_postfix_query.append(stem)
+    return (stems, stemmed_postfix_query)
+
+def negate(skip_list):
+    pass
+
+def merge(skip_list_a, skip_list_b):
+    merged_skip_list_data = []
+    node_a = skip_list_a.get_head()
+    node_b = skip_list_b.get_head()
+    while node_a is not None and node_b is not None:
+        data_a = node_a.get_data()
+        data_b = node_b.get_data()
+        if data_a < data_b:
+            skip_node_a = node_a.get_skip()
+            if skip_node_a is not None and skip_node_a.get_data() <= data_b:
+                node_a = skip_node_a
+            else:
+                node_a = node_a.get_next()
+        elif data_b < data_a:
+            skip_node_b = node_b.get_skip()
+            if skip_node_b is not None and skip_node_b.get_data() <= data_a:
+                node_b = skip_node_b
+            else:
+                node_b = node_b.get_next()
+        else: # data_a == data_b:
+            merged_skip_list_data.append(data_a)
+            node_a = node_a.get_next()
+            node_b = node_b.get_next()
+    merged_skip_list = SkipList()
+    merged_skip_list.build_from(merged_skip_list_data)
+    return merged_skip_list
+
+def union(skip_list_a, skip_list_b):
+    seen_data = set()
+    union_skip_list_data = []
+    node_a = skip_list_a.get_head()
+    node_b = skip_list_b.get_head()
+    while node_a is not None and node_b is not None:
+        data_a = node_a.get_data()
+        data_b = node_b.get_data()
+        if data_a < data_b:
+            union_skip_list_data.append(data_a)
+            node_a = node_a.get_next()
+        elif data_b < data_a:
+            union_skip_list_data.append(data_b)
+            node_b = node_b.get_next()
+        else: # data_a == data_b
+            union_skip_list_data.append(data_a)
+            node_a = node_a.get_next()
+            node_b = node_b.get_next()
+    while node_a is not None:
+        union_skip_list_data.append(node_a.get_data())
+        node_a = node_a.get_next()
+    while node_b is not None:
+        union_skip_list_data.append(node_b.get_data())
+        node_b = node_b.get_next()
+    union_skip_list = SkipList()
+    union_skip_list.build_from(union_skip_list_data)
+    return union_skip_list
 
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
     with open(dictionary_file_name) as d, open(postings_file_name, 'rb') as p, \
@@ -125,14 +167,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             offsets[stem] = int(offset)
         for line in q:
             query = line.rstrip().lower()
-            postfix_query = parse_query(query)
-            print(postfix_query)
-        merge(load_stem('cocoa', p), load_stem('trade', p))
-        # Resolve queries here
-        '''
-        if dictionary[stem] is None:
-            load_stem(stem, p)
-        '''
+            stems, stemmed_postfix_query = parse_query(query)
+            for stem in stems:
+                if stem not in dictionary:
+                    load_stem(stem, p)
+            # Resolve query here
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results')

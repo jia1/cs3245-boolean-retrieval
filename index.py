@@ -14,6 +14,8 @@ stemmer = PorterStemmer()
 
 from skip_list import SkipList
 
+sys.setrecursionlimit(10000)
+
 with open('stopwords.txt') as f:
     stopwords = set(map(lambda ln: ln.strip(), f.readlines()))
 
@@ -41,8 +43,9 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for stem in dictionary:
             d.write('{stem},{offset}\n'.format(stem=stem, offset=p.tell()))
-            postings = SkipList()
-            postings.build_from(dictionary[stem])
+            # postings = SkipList()
+            # postings.build_from(dictionary[stem])
+            postings = dictionary[stem]
             pickle.dump(postings, p)
 
 '''
