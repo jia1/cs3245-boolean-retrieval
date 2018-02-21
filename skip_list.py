@@ -54,3 +54,11 @@ class SkipList:
                 nodes[i].set_skip(nodes[i + step])
         self.head = nodes[0]
         self.last = nodes[-1]
+
+    def to_list(self):
+        node = self.head
+        data = []
+        while node is not None:
+            data.append(node.get_data())
+            node = node.get_next()
+        return data
