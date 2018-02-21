@@ -21,6 +21,10 @@ def load_next(dictionary_file_object, postings_file_object):
     dictionary[stem] = (postings.get_length(), postings)
 
 def load_stem(stem, postings_file_object):
+    postings_file_object.seek(offsets[stem])
+    return pickle.load(postings_file_object)
+
+def parse_query(query_string):
     pass
 
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
@@ -28,10 +32,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         open(queries_file_name) as q, open(output_file_name, 'w') as o:
         for line in d:
             stem, offset = line.rstrip().split(',')
+            offsets[stem] = int(offset)
         # Resolve queries here
         '''
         if dictionary[stem] is None:
-            load_stem(stem, postings_file_object)
+            load_stem(stem, p)
         '''
 
 def usage():

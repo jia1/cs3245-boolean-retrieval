@@ -5,4 +5,5 @@ pip-selfcheck.json
 pyvenv.cfg
 __pycache__/
 .DS_STORE
+Scripts/
 postings.txt
