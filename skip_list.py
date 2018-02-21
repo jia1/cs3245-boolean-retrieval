@@ -43,13 +43,14 @@ class SkipList:
         if not sorted_list:
             return set_node(None)
         self.length = len(sorted_list)
-        step = round(sqrt(self.length))
+        step = round(sqrt(self.length - 1))
         nodes = list(map(
             lambda data: SkipListNode(data),
             sorted_list))
         for i in range(self.length - 1):
             nodes[i].set_next(nodes[i + 1])
-        for i in range(0, self.length - step, step):
-            nodes[i].set_skip(nodes[i + step])
+        if step:
+            for i in range(0, self.length - step, step):
+                nodes[i].set_skip(nodes[i + step])
         self.head = nodes[0]
         self.last = nodes[-1]
