@@ -10,31 +10,37 @@ stemmer = PorterStemmer()
 
 from skip_list import SkipList
 
+universal_stem = '*'
+
 dictionary = {}
 offsets = {}
 
 operators = ['or', 'and', 'not']
 precedences = {operator: precedence for (precedence, operator) in enumerate(operators)}
 
-def load_next(dictionary_file_object, postings_file_object):
-    global dictionary
-    stem = dictionary_file_object.readline().strip()
-    postings = SkipList()
-    try:
-        # postings = pickle.load(postings_file_object)
-        postings.build_from(pickle.load(postings_file_object))
-    except EOFError:
-        pass
-    dictionary[stem] = (postings.get_length(), postings)
-
 def load_stem(stem, postings_file_object):
     global dictionary
+    if stem in dictionary:
+        return dictionary[stem]
     postings = SkipList()
     if stem in offsets:
         postings_file_object.seek(offsets[stem])
         postings.build_from(pickle.load(postings_file_object))
     dictionary[stem] = (postings.get_length(), postings)
-    return postings
+    return dictionary[stem]
+
+def load_stems(stems, postings_file_object):
+    for stem in stems:
+        load_stem(stem, postings_file_object)
+
+def load_next(dictionary_file_object, postings_file_object):
+    stem, postings = None, SkipList()
+    try:
+        stem = dictionary_file_object.readline().strip()
+        postings = load_stem(stem, postings_file_object)
+    except EOFError:
+        pass
+    return {stem: postings.get_length(), postings}
 
 def peek(stack, error='Peek from empty stack'):
     if not stack:
@@ -102,7 +108,26 @@ def parse_query(query_string):
     return (stems, stemmed_postfix_query)
 
 def negate(skip_list):
-    pass
+    negated_skip_list = SkipList()
+    number_of_postings, universal_postings = load_stem(universal_stem)
+    if not number_of_postings:
+        return negated_skip_list
+    negated_skip_list_data = []
+    node_a = universal_postings
+    node_b = skip_list
+    while node_a is not None and node_b is not None:
+        data_a = node_a.get_data()
+        data_b = node_b.get_data()
+        if data_a < data_b:
+            negated_skip_list_data.append(data_a)
+        else: # data_a == data_b
+            node_b = node_b.get_next()
+        node_a = node_a.get_next()
+    while node_a is not None:
+        negated_skip_list_data.append(node_a.get_data())
+        node_a = node_a.get_next()
+    negated_skip_list.build_from(negated_skip_list_data)
+    return negated_skip_list
 
 def merge(skip_list_a, skip_list_b):
     merged_skip_list_data = []
@@ -168,9 +193,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             query = line.rstrip().lower()
             stems, stemmed_postfix_query = parse_query(query)
-            for stem in stems:
-                if stem not in dictionary:
-                    load_stem(stem, p)
+            load_stem(stems, p)
             # Resolve query here
 
 def usage():

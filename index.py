@@ -14,7 +14,7 @@ stemmer = PorterStemmer()
 
 from skip_list import SkipList
 
-sys.setrecursionlimit(10000)
+universal_stem = '*'
 
 with open('stopwords.txt') as f:
     stopwords = set(map(lambda ln: ln.strip(), f.readlines()))
@@ -40,6 +40,7 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
                         if posting not in seen_postings_by_stem[stem]:
                             bisect.insort(dictionary[stem], posting)
                             seen_postings_by_stem[stem].add(posting)
+        dictionary[universal_stem] = sorted(list(map(int, files)))
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for stem in dictionary:
             d.write('{stem},{offset}\n'.format(stem=stem, offset=p.tell()))
