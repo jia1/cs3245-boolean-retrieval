@@ -13,6 +13,31 @@ Give an overview of your program, describe the important algorithms/steps
 in your program, and discuss your experiments in general.  A few paragraphs 
 are usually sufficient.
 
+First, I do indexing. For each text file, I preprocess the entire text. Preprocessing consists of the following steps:
+
+1. Sentence tokenization (text string -> list of sentence strings)
+2. Case-folding, word tokenization, and remove duplicate word tokens via set() for each sentence (each sentence string -> set of word tokens)
+3. Filter out punctuations, non-alphabetical words, and stopwords (shrink each word token set)
+4. Stem the remaining words, and remove duplicate stems (shrink each word token set)
+5. Return the flattened set of stemmed words (list of sets -> set)
+
+The preprocessing is done in this particular order to save as much computation time as possible.
+
+After converting the text into a set of stems, I construct a dictionary of {stem: [posting]}. "stem" is the stem string, and [posting] is a list of document ids (integer). Insertion of document id is done via binary search (bisect module).
+
+I then write the stems to dictionary.txt and the postings to postings.txt. In dictionary.txt, each line follows the format "stem,integer" where integer represents the offset from the first byte of the postings file. On the other hand, postings.txt is a binary file that can be saved or loaded to via pickle.dump and pickle.load respectively.
+
+The indexing step is complete.
+
+Next, I do searching. Searching consists of the following steps:
+
+1. Load stem dictionary (without the postings) and the corresponding file byte offset
+2. Parse each query string into postfix form, and gather the set of stems that appeared in the query
+3. Load only the postings for the relevant stems
+4. Transform the postfix form of the query into a parse tree
+5. Recursively resolve the parse tree leaves, starting from the smallest postings skip list
+6. Write the final postings skip list to the output file
+
 == Files included with this submission ==
 
 List the files in your submission here and provide a short 1 line
@@ -24,6 +49,7 @@ and formatted correctly.
 3. skip_list.py: A module which contains the SkipList and SkipListNode classes. SkipList can contain a SkipListNode, which can be linked with more SkipListNode.
 4. parse_tree.py: A module which contains the ParseTree and ParseTreeNode classes. ParseTree can contain a ParseTreeNode, which can be linked with more ParseTreeNode.
 5. constants.py: A module which contains constants (e.g. magic numbers and strings) that are shared across source files. Examples include the operator list, and their precedences.
+6. command_line_output.txt: A sample log file of the command line output.
 
 == Statement of individual work ==
 
