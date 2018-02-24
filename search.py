@@ -9,6 +9,7 @@ from nltk.stem import PorterStemmer
 stemmer = PorterStemmer()
 
 from skip_list import SkipList
+from parse_tree import ParseTree
 
 universal_stem = '*'
 
@@ -17,6 +18,9 @@ offsets = {}
 
 operators = ['or', 'and', 'not']
 precedences = {operator: precedence for (precedence, operator) in enumerate(operators)}
+
+def is_binary_operator(operator):
+    return operator.lower() != 'not'
 
 def load_stem(stem, postings_file_object):
     global dictionary
@@ -40,7 +44,7 @@ def load_next(dictionary_file_object, postings_file_object):
         postings = load_stem(stem, postings_file_object)
     except EOFError:
         pass
-    return {stem: postings.get_length(), postings}
+    return {stem: (postings.get_length(), postings)}
 
 def peek(stack, error='Peek from empty stack'):
     if not stack:
@@ -106,6 +110,11 @@ def parse_query(query_string):
             stems.add(stem)
             stemmed_postfix_query.append(stem)
     return (stems, stemmed_postfix_query)
+
+def build_tree(postfix_query):
+    tree = ParseTree()
+    tree.build_from(postfix_query)
+    return tree
 
 def negate(skip_list):
     negated_skip_list = SkipList()
@@ -193,8 +202,10 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             query = line.rstrip().lower()
             stems, stemmed_postfix_query = parse_query(query)
-            load_stem(stems, p)
-            # Resolve query here
+            load_stems(stems, p)
+            parse_tree = build_tree(stemmed_postfix_query)
+            while parse_tree.is_operator():
+                operand_a = parse_tree.get_minimum_operand()
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results')
