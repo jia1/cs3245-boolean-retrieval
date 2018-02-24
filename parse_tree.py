@@ -1,20 +1,6 @@
 from collections import deque
 from skip_list import SkipList
-
-identity = lambda x: x
-operators = ['or', 'and', 'not']
-
-# Accepts an operator string (e.g. 'not', 'or', 'and') and
-# Returns True only if the operator is a binary operator (i.e. 'or', 'and')
-def is_binary_operator(operator):
-    return operator.lower() != 'not'
-
-# Accepts a stack (list type)
-# And returns the last element (also last-in)
-def peek(stack, error='Peek from empty stack'):
-    if not stack:
-        sys.exit(error)
-    return stack[-1]
+from constants import operators, identity, is_binary_operator, peek
 
 class ParseTreeNode:
     data = None
@@ -48,11 +34,11 @@ class ParseTreeNode:
     def set_parent(self, parent): self.parent = parent
 
     def print_node(self):
-        print('NODE')
-        print('parent:\t{}'.format(self.parent if self.parent is None else self.parent.data))
-        print('self:\t{}'.format(self.data))
-        print('left:\t{}'.format(self.left if self.left is None else self.left.data))
-        print('right:\t{}'.format(self.right if self.right is None else self.right.data))
+        print('ParseTreeNode')
+        print('^:\t{}'.format(self.parent.data if self.parent is not None else None))
+        print('.:\t{}'.format(self.data))
+        print('<:\t{}'.format(self.left.data if self.left is not None else None))
+        print('>:\t{}'.format(self.right.data if self.right is not None else None))
         print()
 
 class ParseTree:

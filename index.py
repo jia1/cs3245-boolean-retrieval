@@ -8,13 +8,16 @@ import string
 import bisect
 import pickle
 
+from time import time
+
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 stemmer = PorterStemmer()
 
+from constants import universal_stem, print_time
 from skip_list import SkipList
 
-universal_stem = '*'
+start_time = time()
 
 with open('stopwords.txt') as f:
     stopwords = set(map(lambda ln: ln.strip(), f.readlines()))
@@ -44,8 +47,6 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for stem in dictionary:
             d.write('{stem},{offset}\n'.format(stem=stem, offset=p.tell()))
-            # postings = SkipList()
-            # postings.build_from(dictionary[stem])
             postings = dictionary[stem]
             pickle.dump(postings, p)
 
@@ -91,3 +92,7 @@ if input_directory_d == None or output_file_d == None or output_file_p == None:
     sys.exit(2)
 
 do_indexing(input_directory_d, output_file_d, output_file_p)
+
+stop_time = time()
+
+print_time(start_time, stop_time)
