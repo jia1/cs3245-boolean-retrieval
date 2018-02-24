@@ -249,24 +249,31 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             parse_tree = build_tree(stemmed_postfix_query, p) # list to parse tree
             root_node = parse_tree.get_root()
             while root_node is not None and root_node.is_operator():
-                operand_node = parse_tree.get_minimum_operand(comparator=lambda node: node.get_data())
-                operator_node = operand_node.get_parent()
-                operator = operator_node.get_data()
-                if operator_node.is_unary_operator():
-                    operation = unary_operations[operator]
-                    skip_list = operation(operand_node.get_data())
-                else: # operator_node.is_binary_operator()
-                    print(operator_node.get_data()) # Fix this
-                    key_a, operand_a = operator_node.get_left().get_data()
-                    key_b, operand_b = operator_node.get_right().get_data()
-                    operation = binary_operations[operator]
-                    skip_list = operation(operand_a, operand_b)
-                operator_node.set_data((skip_list.get_length(), skip_list))
-                operator_node.set_left(None)
-                operator_node.set_right(None)
+                operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data())
+                index = 0
+                while index < len(operand_nodes):
+                    operand_nodes[index].print_node()
+                    operator_node = operand_nodes[index].get_parent()
+                    operator = operator_node.get_data()
+                    if operator_node.is_unary_operator():
+                        key, operand = operand_node.get_data()
+                        operation = unary_operations[operator]
+                        skip_list = operation(operand)
+                    else: # operator_node.is_binary_operator()
+                        operand_node_a = operator_node.get_left()
+                        operand_node_b = operator_node.get_right()
+                        if operand_node_a.is_operator() or operand_node_b.is_operator():
+                            continue
+                        key_a, operand_a = operand_node_a.get_data()
+                        key_b, operand_b = operand_node_b.get_data()
+                        operation = binary_operations[operator]
+                        skip_list = operation(operand_a, operand_b)
+                    operator_node.set_data((skip_list.get_length(), skip_list))
+                    operator_node.set_left(None)
+                    operator_node.set_right(None)
+                    break
             if root_node is not None:
                 final_skip_list = root_node.get_data()
-                print(final_skip_list)
                 # final_postings_list = final_skip_list.to_list()
                 # print(final_postings_list)
 

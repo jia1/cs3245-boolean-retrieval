@@ -30,9 +30,6 @@ class ParseTreeNode:
 
     def has_left(self): return self.left is not None
     def has_right(self): return self.right is not None
-    def has_parent(self): return self.parent is not None
-
-    def is_root(self): return not self.has_parent()
 
     def is_leaf(self): return not self.has_left() and not self.has_right()
     def is_operand(self): return self.is_leaf()
@@ -50,6 +47,14 @@ class ParseTreeNode:
     def set_right(self, right): self.right = right
     def set_parent(self, parent): self.parent = parent
 
+    def print_node(self):
+        print('NODE')
+        print('parent:\t{}'.format(self.parent if self.parent is None else self.parent.data))
+        print('self:\t{}'.format(self.data))
+        print('left:\t{}'.format(self.left if self.left is None else self.left.data))
+        print('right:\t{}'.format(self.right if self.right is None else self.right.data))
+        print()
+
 class ParseTree:
     root = None
     leaves = set()
@@ -61,8 +66,6 @@ class ParseTree:
 
     def get_root(self): return self.root
     def set_root(self, root): self.root = root
-
-    def add_leaf(self, leaf): leaves.add(leaf)
 
     def reload_leaves(self):
         queue = deque((self.root,))
@@ -76,12 +79,12 @@ class ParseTree:
             if node.has_right():
                 queue.append(node.get_right())
 
-    def get_minimum_leaf(self, comparator=identity):
+    def get_sorted_leaves(self, comparator=identity):
         self.reload_leaves()
-        return min(self.leaves, key=comparator)
+        return sorted(self.leaves, key=comparator)
 
-    def get_minimum_operand(self, comparator=identity):
-        return self.get_minimum_leaf(comparator)
+    def get_sorted_operands(self, comparator=identity):
+        return self.get_sorted_leaves(comparator)
 
     def build_from(self, postfix_list):
         stack = []
