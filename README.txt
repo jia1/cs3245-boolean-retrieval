@@ -38,6 +38,23 @@ Next, I do searching. Searching consists of the following steps:
 5. Recursively resolve the parse tree leaves, starting from the smallest postings skip list
 6. Write the final postings skip list to the output file
 
+The offsets in (1) will tell me where to seek when I want to load that particular stem's postings.
+
+To parse a query string into postfix form, I first conduct case-folding, tokenization, and then I call the shunting_yard function (based on the Shunting Yard algorithm). The shunting_yard function accepts a list of tokens and returns a list of tokens in postfix form (e.g. operand, operand, operator). The tokenization step not only splits the query string by space, but also splits parentheses away from the word tokens. I also parse the processed query to get the set of stems that exist in the query, so that I can load the relevant postings.
+
+With the query in postfix form, I can build a parse tree where operators are internal nodes and operands are leaf nodes. The operands are the postings. In my searching function, I recursively reduce the parse tree by resolving the parse tree leaves with their operator. The order of reduction is by the number of postings (smallest number of postings would get evaluated first). However, if the smallest operand has an operator as its second operand (i.e. the subtree was not evaluated), I will instead evaluate the next smallest operand (and so on). The reduction is as follows:
+
+1. Get the node with the smallest number of postings (the smallest operand)
+2. Get the operator of the operand in (1)
+3. If the operator is a unary operator, simply evaluate, and rewrite the operator node with the result (i.e. the operator node is now an operand node; reduction complete)
+4. If the operator is a binary operator, check that the two operands are operands (no un-evaluated subtree as operand)
+5. If both operands are truly operands, evaluation can be done and this particular operator and operand subtree is reduced to an operand node
+6. Otherwise, we should look at the next smallest operand
+
+The parse tree eventually becomes a single operand node containing the final postings.
+
+And last but not least, I write the final postings to the output file.
+
 == Files included with this submission ==
 
 List the files in your submission here and provide a short 1 line
