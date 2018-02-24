@@ -22,14 +22,14 @@ precedences = {operator: precedence for (precedence, operator) in enumerate(oper
 # NOT(skip list)
 # Accepts a skip list and returns a negated skip list
 # Dependent on the existence of universal_postings (a skip list of every posting)
-def negate(skip_list):
+def negate(skip_list, postings_file_object):
     negated_skip_list = SkipList()
-    number_of_postings, universal_postings = load_stem(universal_stem)
+    number_of_postings, universal_postings = load_stem(universal_stem, postings_file_object)
     if not number_of_postings:
         return negated_skip_list
     negated_skip_list_data = []
-    node_a = universal_postings
-    node_b = skip_list
+    node_a = universal_postings.get_head()
+    node_b = skip_list.get_head()
     while node_a is not None and node_b is not None:
         data_a = node_a.get_data()
         data_b = node_b.get_data()
@@ -245,20 +245,19 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             query = line.rstrip().lower()
             stems, stemmed_postfix_query = parse_query(query) # string to list in postfix form
-            print(stemmed_postfix_query)
             parse_tree = build_tree(stemmed_postfix_query, p) # list to parse tree
             root_node = parse_tree.get_root()
             while root_node is not None and root_node.is_operator():
                 operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data())
                 index = 0
                 while index < len(operand_nodes):
-                    operand_nodes[index].print_node()
-                    operator_node = operand_nodes[index].get_parent()
+                    operand_node = operand_nodes[index]
+                    operator_node = operand_node.get_parent()
                     operator = operator_node.get_data()
                     if operator_node.is_unary_operator():
                         key, operand = operand_node.get_data()
                         operation = unary_operations[operator]
-                        skip_list = operation(operand)
+                        skip_list = operation(operand, p)
                     else: # operator_node.is_binary_operator()
                         operand_node_a = operator_node.get_left()
                         operand_node_b = operator_node.get_right()
@@ -273,9 +272,9 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     operator_node.set_right(None)
                     break
             if root_node is not None:
-                final_skip_list = root_node.get_data()
-                # final_postings_list = final_skip_list.to_list()
-                # print(final_postings_list)
+                final_length, final_skip_list = root_node.get_data()
+                final_postings_list = final_skip_list.to_list()
+                print(final_length)
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results')

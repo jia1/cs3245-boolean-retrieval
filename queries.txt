@@ -1,1 +1,10 @@
+bill
+Gates
+vista
+XP
+mac
+NOT mac
+(vista OR XP)
+(vista OR XP) AND NOT mac
+Gates AND (vista OR XP) AND NOT mac
 bill OR Gates AND (vista OR XP) AND NOT mac

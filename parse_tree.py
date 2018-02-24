@@ -68,6 +68,7 @@ class ParseTree:
     def set_root(self, root): self.root = root
 
     def reload_leaves(self):
+        self.leaves = set()
         queue = deque((self.root,))
         while queue:
             node = queue.popleft()
