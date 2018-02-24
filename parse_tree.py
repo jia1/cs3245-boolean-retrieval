@@ -1,8 +1,20 @@
 from collections import deque
 from skip_list import SkipList
-from search import operators, is_binary_operator, peek
 
 identity = lambda x: x
+operators = ['or', 'and', 'not']
+
+# Accepts an operator string (e.g. 'not', 'or', 'and') and
+# Returns True only if the operator is a binary operator (i.e. 'or', 'and')
+def is_binary_operator(operator):
+    return operator.lower() != 'not'
+
+# Accepts a stack (list type)
+# And returns the last element (also last-in)
+def peek(stack, error='Peek from empty stack'):
+    if not stack:
+        sys.exit(error)
+    return stack[-1]
 
 class ParseTreeNode:
     data = None
@@ -21,12 +33,11 @@ class ParseTreeNode:
     def has_parent(self): return self.parent is not None
 
     def is_root(self): return not self.has_parent()
-    def is_evaluated(self): return self.is_root()
 
-    def is_leaf(self): return self.has_left() and self.has_right()
+    def is_leaf(self): return not self.has_left() and not self.has_right()
     def is_operand(self): return self.is_leaf()
     def is_operator(self): return not self.is_operand()
-    def is_unary_operator(self): return self.is_operator() and not self.has_right()
+    def is_unary_operator(self): return self.has_left() and not self.has_right()
     def is_binary_operator(self): return self.has_left() and self.has_right()
 
     def get_data(self): return self.data
@@ -54,7 +65,7 @@ class ParseTree:
     def add_leaf(self, leaf): leaves.add(leaf)
 
     def reload_leaves(self):
-        queue = dequeue((self.root,))
+        queue = deque((self.root,))
         while queue:
             node = queue.popleft()
             if node.is_leaf():
@@ -66,30 +77,29 @@ class ParseTree:
                 queue.append(node.get_right())
 
     def get_minimum_leaf(self, comparator=identity):
-        '''
-        if leaves:
-            return min(leaves, key=comparator)
-        '''
         self.reload_leaves()
-        return self.get_minimum_leaf(comparator)
+        return min(self.leaves, key=comparator)
 
     def get_minimum_operand(self, comparator=identity):
-        return get_minimum_leaf(comparator)
+        return self.get_minimum_leaf(comparator)
 
     def build_from(self, postfix_list):
         stack = []
-        for token in postfix_list:
+        nodes = map(lambda data: ParseTreeNode(data=data), postfix_list)
+        for node in nodes:
+            token = node.get_data()
             if token not in operators:
-                stack.append(token)
+                stack.append(node)
             else:
-                operator_node = ParseTreeNode(data=token)
-                left_operand = peek(stack, error='Insufficient number of operands')
-                operator_node.set_left(ParseTreeNode(data=left_operand, parent=operator_node))
+                left_node = peek(stack, error='Insufficient number of operands')
+                left_node.set_parent(node)
+                node.set_left(left_node)
                 stack.pop()
                 if is_binary_operator(token):
-                    right_operand = peek(stack, error='Insufficient number of operands')
-                    operator_node.set_right(ParseTreeNode(data=right_operand, parent=operator_node))
+                    right_node = peek(stack, error='Insufficient number of operands')
+                    right_node.set_parent(node)
+                    node.set_right(right_node)
                     stack.pop()
-                stack.append(operator_node)
+                stack.append(node)
         if stack:
             self.root = stack.pop()
