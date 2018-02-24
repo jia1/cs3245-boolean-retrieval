@@ -19,9 +19,22 @@ offsets = {}
 operators = ['or', 'and', 'not']
 precedences = {operator: precedence for (precedence, operator) in enumerate(operators)}
 
+unary_operations = {
+    'not': negate
+}
+
+binary_operations = {
+    'or': union,
+    'and': merge
+}
+
+# Accepts an operator string (e.g. 'not', 'or', 'and') and
+# Returns True only if the operator is a binary operator (i.e. 'or', 'and')
 def is_binary_operator(operator):
     return operator.lower() != 'not'
 
+# Accepts a stem, a postings file handle, and
+# Returns the loaded postings skip list while storing it in memory
 def load_stem(stem, postings_file_object):
     global dictionary
     if stem in dictionary:
@@ -33,24 +46,33 @@ def load_stem(stem, postings_file_object):
     dictionary[stem] = (postings.get_length(), postings)
     return dictionary[stem]
 
+# Accepts a list of stems, a postings file handle, and
+# Stores the loaded postings skip lists in memory
 def load_stems(stems, postings_file_object):
     for stem in stems:
         load_stem(stem, postings_file_object)
 
+# Unused function
+# Accepts a dictionary file handle, postings file handle, and
+# Returns the next dictionary entry of {stem: (number of postings, postings skip list)}
 def load_next(dictionary_file_object, postings_file_object):
     stem, postings = None, SkipList()
     try:
         stem = dictionary_file_object.readline().strip()
-        postings = load_stem(stem, postings_file_object)
+        postings_tuple = load_stem(stem, postings_file_object)
     except EOFError:
         pass
-    return {stem: (postings.get_length(), postings)}
+    return {stem: postings_tuple}
 
+# Accepts a stack (list type)
+# And returns the last element (also last-in)
 def peek(stack, error='Peek from empty stack'):
     if not stack:
         sys.exit(error)
     return stack[-1]
 
+# Accepts a string and
+# Returns a list of tokens where parentheses are tokenized too
 def tokenize(expression):
     final_tokens = []
     for token in expression.split(' '):
@@ -67,6 +89,8 @@ def tokenize(expression):
         final_tokens.extend(inner_tokens)
     return final_tokens
 
+# Accepts a list of tokens and
+# Returns a list of tokens in postfix syntax
 def shunting_yard(tokens):
     output_queue = []
     operator_stack = []
@@ -97,6 +121,8 @@ def shunting_yard(tokens):
         output_queue.append(operator_stack.pop())
     return output_queue
 
+# Accepts a case-folded line without leading or trailing whitespaces and
+# Returns a tuple of (stems in query, query in postfix list form)
 def parse_query(query_string):
     query_tokens = tokenize(query_string)
     postfix_query = shunting_yard(query_tokens)
@@ -111,11 +137,23 @@ def parse_query(query_string):
             stemmed_postfix_query.append(stem)
     return (stems, stemmed_postfix_query)
 
-def build_tree(postfix_query):
+# Accepts a query in postfix list form (i.e. second return value from parse_query function) and
+# Returns a parse tree of parse tree nodes (see parse_tree.py)
+def build_tree(postfix_query, postings_file_object):
+    postfix_expression = []
+    for token in postfix_query:
+        if token in operators:
+            postfix_expression.append(token)
+        else:
+            postings_tuple = load_stem(token, postings_file_object)
+            postfix_expression.append(postings_tuple)
     tree = ParseTree()
-    tree.build_from(postfix_query)
+    tree.build_from(postfix_expression)
     return tree
 
+# NOT(skip list)
+# Accepts a skip list and returns a negated skip list
+# Dependent on the existence of universal_postings (a skip list of every posting)
 def negate(skip_list):
     negated_skip_list = SkipList()
     number_of_postings, universal_postings = load_stem(universal_stem)
@@ -138,33 +176,9 @@ def negate(skip_list):
     negated_skip_list.build_from(negated_skip_list_data)
     return negated_skip_list
 
-def merge(skip_list_a, skip_list_b):
-    merged_skip_list_data = []
-    node_a = skip_list_a.get_head()
-    node_b = skip_list_b.get_head()
-    while node_a is not None and node_b is not None:
-        data_a = node_a.get_data()
-        data_b = node_b.get_data()
-        if data_a < data_b:
-            skip_node_a = node_a.get_skip()
-            if skip_node_a is not None and skip_node_a.get_data() <= data_b:
-                node_a = skip_node_a
-            else:
-                node_a = node_a.get_next()
-        elif data_b < data_a:
-            skip_node_b = node_b.get_skip()
-            if skip_node_b is not None and skip_node_b.get_data() <= data_a:
-                node_b = skip_node_b
-            else:
-                node_b = node_b.get_next()
-        else: # data_a == data_b:
-            merged_skip_list_data.append(data_a)
-            node_a = node_a.get_next()
-            node_b = node_b.get_next()
-    merged_skip_list = SkipList()
-    merged_skip_list.build_from(merged_skip_list_data)
-    return merged_skip_list
-
+# OR(skip list A, skip list B)
+# Accepts two skip lists and returns a skip list containing postings from either skip list
+# OR != XOR and there will be no duplicate postings in the output skip list
 def union(skip_list_a, skip_list_b):
     seen_data = set()
     union_skip_list_data = []
@@ -193,19 +207,67 @@ def union(skip_list_a, skip_list_b):
     union_skip_list.build_from(union_skip_list_data)
     return union_skip_list
 
+# AND(skip list A, skip list B)
+# Accepts two skip lists and returns a skip list containing postings which both skip lists have
+# Does skipping when the skip pointer node of one skip list has a value less than the other skip list node
+def merge(skip_list_a, skip_list_b):
+    merged_skip_list_data = []
+    node_a = skip_list_a.get_head()
+    node_b = skip_list_b.get_head()
+    while node_a is not None and node_b is not None:
+        data_a = node_a.get_data()
+        data_b = node_b.get_data()
+        if data_a < data_b:
+            skip_node_a = node_a.get_skip()
+            if skip_node_a is not None and skip_node_a.get_data() <= data_b:
+                node_a = skip_node_a
+            else:
+                node_a = node_a.get_next()
+        elif data_b < data_a:
+            skip_node_b = node_b.get_skip()
+            if skip_node_b is not None and skip_node_b.get_data() <= data_a:
+                node_b = skip_node_b
+            else:
+                node_b = node_b.get_next()
+        else: # data_a == data_b:
+            merged_skip_list_data.append(data_a)
+            node_a = node_a.get_next()
+            node_b = node_b.get_next()
+    merged_skip_list = SkipList()
+    merged_skip_list.build_from(merged_skip_list_data)
+    return merged_skip_list
+
+# MAIN function for search.py
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
     with open(dictionary_file_name) as d, open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, open(output_file_name, 'w') as o:
+        # Build the offsets dictionary for seeking later
         for line in d:
             stem, offset = line.rstrip().split(',')
             offsets[stem] = int(offset)
+        # Process each query one-by-one but with the same resources
+        # I.e. Duplicate stems are loaded only once
         for line in q:
             query = line.rstrip().lower()
-            stems, stemmed_postfix_query = parse_query(query)
-            load_stems(stems, p)
-            parse_tree = build_tree(stemmed_postfix_query)
+            stems, stemmed_postfix_query = parse_query(query) # string to list in postfix form
+            parse_tree = build_tree(stemmed_postfix_query) # list to parse tree
             while parse_tree.is_operator():
-                operand_a = parse_tree.get_minimum_operand()
+                key, operand = parse_tree.get_minimum_operand()
+                operator_node = operand.get_parent()
+                operator = operator_node.get_data()
+                if operator_node.is_unary_operator():
+                    operation = unary_operations[operator]
+                    skip_list = operation(operand)
+                else: # operator_node.is_binary_operator()
+                    key_a, operand_a = operator_node.get_left().get_data()
+                    key_b, operand_b = operator_node.get_right().get_data()
+                    skip_list = operation(operand_a, operand_b)
+                operator_node.set_data((skip_list.get_length(), skip_list))
+                operator_node.set_left(None)
+                operator_node.set_right(None)
+            final_skip_list = parse_tree.get_data()
+            final_postings_list = final_skip_list.to_list()
+            print(final_postings_list)
 
 def usage():
     print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results')

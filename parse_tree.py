@@ -27,6 +27,7 @@ class ParseTreeNode:
     def is_operand(self): return self.is_leaf()
     def is_operator(self): return not self.is_operand()
     def is_unary_operator(self): return self.is_operator() and not self.has_right()
+    def is_binary_operator(self): return self.has_left() and self.has_right()
 
     def get_data(self): return self.data
     def get_left(self): return self.left
