@@ -92,4 +92,10 @@ I suggest that I should be graded as follows:
 <Please list any websites and/or people you consulted with for this
 assignment and state their role>
 
-I did this assignment by myself.
+I did this assignment by myself code-wise, but I consulted the following sources for concepts and pseudocode:
+
+- [CS3245 Lecture Notes](http://www.comp.nus.edu.sg/~zhaojin/cs3245_2018/syllabus.html)
+- [Python 3.6.4 documentation](https://docs.python.org/3/)
+- [Shunting-yard pseudocode on Wikipedia](https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
+
+The skip list implementation came from my learning in CS2020 and the parse tree idea + implementation came from my personal interpretation of the postfix string after staring at it.
