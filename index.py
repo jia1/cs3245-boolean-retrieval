@@ -25,7 +25,7 @@ with open('stopwords.txt') as f:
 '''
 Create a dictionary[stem] -> sorted([postings]) and write to the dictionary and postings file
     - dictionary is a dictionary whose keys are stems and whose values are sorted posting lists
-    - postings will then be converted into a skip list with sqrt(postings.length) skip pointers 
+    - postings will then be converted into a skip list with sqrt(len(postings)) skip pointers 
 '''
 def do_indexing(documents_directory_name, dictionary_file_name, postings_file_name):
     dictionary = {}

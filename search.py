@@ -36,29 +36,37 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             root_node = parse_tree.get_root()
             while root_node is not None and root_node.is_operator():
                 operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data())
+                # Recall that node.data is (number of postings, postings skip list) and as such the
+                # comparator compares nodes by the number of postings (tuple comparison is done by
+                # comparing the first element unless otherwise specified)
                 index = 0
-                while index < len(operand_nodes):
+                while index < len(operand_nodes): # a loop to evaluate the smallest operand possible
                     operand_node = operand_nodes[index]
                     operator_node = operand_node.get_parent()
                     operator = operator_node.get_data()
                     if operator_node.is_unary_operator():
                         key, operand = operand_node.get_data()
-                        operation = unary_operations[operator]
+                        operation = unary_operations[operator] # e.g. NOT
                         skip_list = operation(operand, p)
                     else: # operator_node.is_binary_operator()
                         operand_node_a = operator_node.get_left()
                         operand_node_b = operator_node.get_right()
                         if operand_node_a.is_operator() or operand_node_b.is_operator():
+                            # The other operand is unevaluated (i.e. not a leaf, and still a subtree
+                            # with an operator as root) so we should look at the next operand with the
+                            # smallest number of postings
+                            index += 1
                             continue
-                        key_a, operand_a = operand_node_a.get_data()
+                        key_a, operand_a = operand_node_a.get_data() # key_* is the number of postings
                         key_b, operand_b = operand_node_b.get_data()
-                        operation = binary_operations[operator]
+                        operation = binary_operations[operator] # e.g. AND, OR
                         skip_list = operation(operand_a, operand_b)
+                    # Mutate the subtree root (an operator) into the new evaluated operand (a leaf)
                     operator_node.set_data((skip_list.get_length(), skip_list))
                     operator_node.set_left(None)
                     operator_node.set_right(None)
                     break
-            if root_node is not None:
+            if root_node is not None: # is an operand
                 final_length, final_skip_list = root_node.get_data()
                 final_postings_list = map(str, final_skip_list.to_list())
                 o.write(' '.join(final_postings_list))
@@ -99,7 +107,7 @@ def tokenize(expression):
     return final_tokens
 
 # Accepts a list of tokens and
-# Returns a list of tokens in postfix syntax
+# Returns a list of tokens in postfix form
 def shunting_yard(tokens):
     output_queue = []
     operator_stack = []
@@ -130,7 +138,7 @@ def shunting_yard(tokens):
         output_queue.append(operator_stack.pop())
     return output_queue
 
-# Accepts a query in postfix list form (i.e. second return value from parse_query function) and
+# Accepts a query in postfix list form (i.e. the second return value from parse_query function) and
 # Returns a parse tree of parse tree nodes (see parse_tree.py)
 def build_tree(postfix_query, postings_file_object):
     postfix_expression = []
@@ -157,7 +165,7 @@ def load_stem(stem, postings_file_object):
     dictionary[stem] = (postings.get_length(), postings)
     return dictionary[stem]
 
-# NOT(skip list)
+# Implementation of NOT(skip list)
 # Accepts a skip list and returns a negated skip list
 # Dependent on the existence of universal_postings (a skip list of every posting)
 def negate(skip_list, postings_file_object):
@@ -182,7 +190,7 @@ def negate(skip_list, postings_file_object):
     negated_skip_list.build_from(negated_skip_list_data)
     return negated_skip_list
 
-# OR(skip list A, skip list B)
+# Implementation of OR(skip list A, skip list B)
 # Accepts two skip lists and returns a skip list containing postings from either skip list
 # OR != XOR and there will be no duplicate postings in the output skip list
 def union(skip_list_a, skip_list_b):
@@ -213,7 +221,7 @@ def union(skip_list_a, skip_list_b):
     union_skip_list.build_from(union_skip_list_data)
     return union_skip_list
 
-# AND(skip list A, skip list B)
+# Implementation of AND(skip list A, skip list B)
 # Accepts two skip lists and returns a skip list containing postings which both skip lists have
 # Does skipping when the skip pointer node of one skip list has a value less than the other skip list node
 def merge(skip_list_a, skip_list_b):
