@@ -47,21 +47,24 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
                         if posting not in seen_postings_by_stem[stem]:
                             bisect.insort(dictionary[stem], posting_frequency_tuple)
                             seen_postings_by_stem[stem].add(posting)
+        N = len(files)
+        break
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for stem in dictionary:
             d.write('{stem},{offset}\n'.format(stem=stem, offset=p.tell()))
             postings = dictionary[stem]
             pickle.dump(postings, p)
     with open(lengths_file_name, 'wb') as l:
+        pickle.dump(N, l)
         pickle.dump(lengths_by_document, l)
 
 '''
 Preprocess a text string in the following order:
-    1. (L74) Do sentence tokenization
-    2. (L72) For each sentence, do case-folding, word tokenization
-    3. (L70) Filter out punctuations, non-alphabetical words, and stopwords
-    4. (L69) Stem the remaining words
-    5. (L75) Return a Counter of stemmed words (i.e. {stem: frequency})
+    1. (L77) Do sentence tokenization
+    2. (L75) For each sentence, do case-folding, word tokenization
+    3. (L73) Filter out punctuations, non-alphabetical words, and stopwords
+    4. (L72) Stem the remaining words
+    5. (L78) Return a Counter of stemmed words (i.e. {stem: frequency})
 '''
 def get_preprocessed(text):
     sentences = map(
