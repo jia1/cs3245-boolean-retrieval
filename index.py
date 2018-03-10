@@ -34,8 +34,8 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
         for posting in files:
             with open(os.path.join(root, posting)) as f:
                 text = get_preprocessed(f.read())
+                posting = int(posting)
                 for stem in text:
-                    posting = int(posting)
                     if stem not in dictionary:
                         dictionary[stem] = [posting]
                         seen_postings_by_stem[stem] = set((posting,))
