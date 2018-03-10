@@ -52,11 +52,11 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
 
 '''
 Preprocess a text string in the following order:
-    1. (L65) Do sentence tokenization
-    2. (L63) For each sentence, do case-folding, word tokenization, and remove duplicate word tokens
-    3. (L60) Filter out punctuations, non-alphabetical words, and stopwords
-    4. (L59) Stem the remaining words, and remove duplicate stems
-    5. (L65) Return a flattened set of stemmed words
+    1. (L69) Do sentence tokenization
+    2. (L67) For each sentence, do case-folding, word tokenization, and remove duplicate word tokens
+    3. (L65) Filter out punctuations, non-alphabetical words, and stopwords
+    4. (L64) Stem the remaining words, and remove duplicate stems
+    5. (L70) Return a flattened set of stemmed words
 '''
 def get_preprocessed(text):
     sentences = map(
