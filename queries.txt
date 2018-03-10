@@ -1,0 +1,8 @@
+bill
+Gates
+vista
+XP
+mac
+vista XP
+Gates vista XP
+bill Gates vista XP

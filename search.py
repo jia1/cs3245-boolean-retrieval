@@ -6,6 +6,7 @@ import getopt
 import math
 import numpy as np
 import pickle
+import string
 
 from collections import Counter
 from time import time
@@ -13,7 +14,7 @@ from time import time
 from nltk.stem import PorterStemmer
 stemmer = PorterStemmer()
 
-from constants import lengths_file_name, print_time
+from constants import lengths_file_name, top_n, print_time
 from skip_list import SkipList
 
 start_time = time()
@@ -28,7 +29,7 @@ with open('stopwords.txt') as f:
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
     with open(dictionary_file_name) as d, open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, open(output_file_name, 'w') as o, \
-        open(lengths_file_name) as l:
+        open(lengths_file_name, 'rb') as l:
         # Build the offsets dictionary for seeking later
         for line in d:
             stem, offset = line.rstrip().split(',')
@@ -40,34 +41,43 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             stems, stemmed_query = get_preprocessed_query(line)
             query_counter = Counter(stemmed_query)
+            query_tfidfs = []
+            for stem in stems:
+                tf = query_counter[stem]
+                query_tfidfs.append(get_tfidf_weight(tf))
+            query_tfidfs = np.array(query_tfidfs)
+            query_tfidfs = np.divide(query_tfidfs, np.linalg.norm(query_tfidfs))
             tfidf_by_document = {}
             number_of_terms = len(stems)
-            for stem in stems:
-                df, postings = load_stem(stem, postings_file_object) 
+            for stem_index, stem in enumerate(stems):
+                df, postings = load_stem(stem, p) 
                 node = postings.get_head()
                 while node is not None:
                     doc_id, tf = node.get_data()
-                    if doc_id in tfidf_by_document:
-                        pass
+                    if doc_id not in tfidf_by_document:
+                        tfidf_by_document[doc_id] = np.array([0 for i in stems])
                     else:
-                        pass
-            # TODO: Complete this function
+                        tfidf_by_document[doc_id][stem_index] = get_tfidf_weight(tf, df, N)
+            similarity_by_document = {doc_id: get_cosine_similarity(doc_tfidfs,
+                query_tfidfs, b_is_unit=True) for doc_id, doc_tfidfs in tfidf_by_document.items()}
+            relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
+            o.write(' '.join(map(lambda t: str(t[0]), relevant_doc_tuples[:top_n])))
+            o.write('\n')
 
-def get_tfidf_weights(tfs, dfs, N):
-    return nd.array((get_tfidf_weight(tf, df, N) for tf, df in zip(tfs, dfs)))
-
-def get_tfidf_weight(tf, df, N):
+def get_tfidf_weight(tf, df=1, N=10):
     tf_weight = 0
     if tf:
         tf_weight = 1 + math.log10(tf)
     idf_weight = math.log10(N / df)
     return tf_weight * idf_weight
 
-def get_cosine_similarity(np_array_a, np_array_b, is_unit=False):
+def get_cosine_similarity(np_array_a, np_array_b, a_is_unit=False, b_is_unit=False):
     cos_value = np.dot(np_array_a, np_array_b)
-    if not is_unit:
-        cos_value /= np.linalg.norm(np_array_a) * np.linalg.norm(np_array_b)
-    return np.math.acos(cos_value)
+    if not a_is_unit:
+        cos_value /= np.linalg.norm(np_array_a)
+    if not b_is_unit:
+        cos_value /= np.linalg.norm(np_array_b)
+    return math.acos(cos_value)
 
 # Accepts a line and returns (set of stems, preprocessed line):
 # 1. Tokenize
@@ -78,12 +88,12 @@ def get_preprocessed_query(line):
     query_tokens = map(
         lambda token: token.strip(string.punctuation),
         line.rstrip().lower().split(' '))
-    stemmed_query = map(
+    stemmed_query = list(map(
         lambda token: stemmer.stem(token),
         filter(
             lambda token: token.isalpha() and token not in stopwords,
-            query_tokens))
-    return (set(stemmed_query), list(stemmed_query))
+            query_tokens)))
+    return (set(stemmed_query), stemmed_query)
 
 # Accepts a stem, a postings file handle, and
 # Returns the loaded postings skip list while storing it in memory

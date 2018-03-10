@@ -1,0 +1,2 @@
+(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-boolean-retrieval>python index.py -i reuters -d dictionary.txt -p postings.txt
+Time taken: 66.46894 seconds
