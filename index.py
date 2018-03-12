@@ -36,7 +36,7 @@ def do_indexing(documents_directory_name, dictionary_file_name, postings_file_na
         for posting in files:
             with open(os.path.join(root, posting)) as f:
                 text = get_preprocessed(f.read()) # Counter type of {stem: frequency}
-                posting = int(posting)
+                posting = int(posting.split('.')[0])
                 lengths_by_document[posting] = sum(text.values())
                 for stem, frequency in text.items():
                     posting_frequency_tuple = (posting, frequency)

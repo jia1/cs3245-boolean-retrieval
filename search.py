@@ -58,6 +58,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                         tfidf_by_document[doc_id] = np.array([0 for i in stems])
                     else:
                         tfidf_by_document[doc_id][stem_index] = get_tfidf_weight(tf, df, N)
+                    node = node.get_next()
             similarity_by_document = {doc_id: get_cosine_similarity(doc_tfidfs,
                 query_tfidfs, b_is_unit=True) for doc_id, doc_tfidfs in tfidf_by_document.items()}
             relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
