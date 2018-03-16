@@ -58,25 +58,34 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 while node is not None:
                     doc_id, tf = node.get_data()
                     if doc_id not in tfidf_by_document:
-                        tfidf_by_document[doc_id] = np.array([0 for i in stems])
+                        # tfidf_by_document[doc_id] = np.array([0 for i in stems])
+                        tfidf_by_document[doc_id] = 0
                     else:
-                        tfidf_by_document[doc_id][stem_index] = get_tfidf_weight(tf, df, N)
+                        # tfidf_by_document[doc_id][stem_index] = get_tfidf_weight(tf, df, N)
+                        tfidf_by_document[doc_id] += get_tfidf_weight(tf, df, N)
                     node = node.get_next()
+            '''
             similarity_by_document = {doc_id: get_cosine_similarity(doc_tfidfs,
                 query_tfidfs, b_is_unit=True) for doc_id, doc_tfidfs in tfidf_by_document.items()}
+            '''
+            # Refactor similarity_by_document
+
             # Should heapify instead of sort because:
             # sort costs N(log2(N)) but heapify + pop k costs N + k(log2(N))
-            # relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
+            relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
             # Insert heap operations here
-            relevant_doc_tuples = []
+            # relevant_doc_tuples = []
             o.write(' '.join(map(lambda t: str(t[0]), relevant_doc_tuples[:top_n])))
             o.write('\n')
 
-def get_tfidf_weight(tf, df=1, N=10):
+def get_tfidf_weight(tf, df=0, N=0):
     tf_weight = 0
     if tf:
         tf_weight = 1 + math.log10(tf)
-    idf_weight = math.log10(N / df)
+    if df:
+        idf_weight = math.log10(N / df)
+    else:
+        idf_weight = 1
     return tf_weight * idf_weight
 
 def get_cosine_similarity(np_array_a, np_array_b, a_is_unit=False, b_is_unit=False):
