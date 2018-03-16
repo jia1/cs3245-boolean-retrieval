@@ -46,9 +46,12 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 tf = query_counter[stem]
                 query_tfidfs.append(get_tfidf_weight(tf))
             query_tfidfs = np.array(query_tfidfs)
-            query_tfidfs = np.divide(query_tfidfs, np.linalg.norm(query_tfidfs))
+            # The following line is unnecessary because we only want to capture ranking and
+            # we do not need the absolute similarity
+            # query_tfidfs = np.divide(query_tfidfs, np.linalg.norm(query_tfidfs))
             tfidf_by_document = {}
             number_of_terms = len(stems)
+            # TODO: Re-evaluate this procedure
             for stem_index, stem in enumerate(stems):
                 df, postings = load_stem(stem, p) 
                 node = postings.get_head()
@@ -61,7 +64,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     node = node.get_next()
             similarity_by_document = {doc_id: get_cosine_similarity(doc_tfidfs,
                 query_tfidfs, b_is_unit=True) for doc_id, doc_tfidfs in tfidf_by_document.items()}
-            relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
+            # Should heapify instead of sort because:
+            # sort costs N(log2(N)) but heapify + pop k costs N + k(log2(N))
+            # relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
+            # Insert heap operations here
+            relevant_doc_tuples = []
             o.write(' '.join(map(lambda t: str(t[0]), relevant_doc_tuples[:top_n])))
             o.write('\n')
 
