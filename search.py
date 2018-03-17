@@ -71,12 +71,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
 
 def get_tfidf_weight(tf, df=0, N=0):
     tf_weight = 0
+    idf_weight = 1
     if tf:
         tf_weight = 1 + log10(tf)
     if df:
         idf_weight = log10(N / df)
-    else:
-        idf_weight = 1
     return tf_weight * idf_weight
 
 # Accepts a line and returns (set of stems, preprocessed line):
