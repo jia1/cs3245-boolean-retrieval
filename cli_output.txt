@@ -2,4 +2,4 @@
 Time taken: 66.46894 seconds
 
 (cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-boolean-retrieval>python search.py -d dictionary.txt -p postings.txt -q queries.txt -o output.txt
-Time taken: 0.02702 seconds
+Time taken: 0.02902 seconds
