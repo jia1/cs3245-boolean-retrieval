@@ -3,12 +3,12 @@ import nltk
 import sys
 import getopt
 
-import math
-import numpy as np
 import pickle
 import string
 
 from collections import Counter
+from heapq import heapify, heappop
+from math import log10
 from time import time
 
 from nltk.stem import PorterStemmer
@@ -40,61 +40,38 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         # I.e. Duplicate stems are loaded only once
         for line in q:
             stems, stemmed_query = get_preprocessed_query(line)
-            query_counter = Counter(stemmed_query)
-            query_tfidfs = []
-            for stem in stems:
-                tf = query_counter[stem]
-                query_tfidfs.append(get_tfidf_weight(tf))
-            query_tfidfs = np.array(query_tfidfs)
-            # The following line is unnecessary because we only want to capture ranking and
-            # we do not need the absolute similarity
-            # query_tfidfs = np.divide(query_tfidfs, np.linalg.norm(query_tfidfs))
+            query_tfs = Counter(stemmed_query)
             tfidf_by_document = {}
-            number_of_terms = len(stems)
-            # TODO: Re-evaluate this procedure
             for stem_index, stem in enumerate(stems):
-                df, postings = load_stem(stem, p) 
+                query_tfidf = get_tfidf_weight(query_tfs[stem])
+                df, postings = load_stem(stem, p)
                 node = postings.get_head()
                 while node is not None:
-                    doc_id, tf = node.get_data()
+                    doc_id, doc_tf = node.get_data()
                     if doc_id not in tfidf_by_document:
-                        # tfidf_by_document[doc_id] = np.array([0 for i in stems])
                         tfidf_by_document[doc_id] = 0
                     else:
-                        # tfidf_by_document[doc_id][stem_index] = get_tfidf_weight(tf, df, N)
-                        tfidf_by_document[doc_id] += get_tfidf_weight(tf, df, N)
+                        tfidf_by_document[doc_id] -= get_tfidf_weight(doc_tf, df, N) * query_tfidf
                     node = node.get_next()
-            '''
-            similarity_by_document = {doc_id: get_cosine_similarity(doc_tfidfs,
-                query_tfidfs, b_is_unit=True) for doc_id, doc_tfidfs in tfidf_by_document.items()}
-            '''
-            # Refactor similarity_by_document
-
-            # Should heapify instead of sort because:
-            # sort costs N(log2(N)) but heapify + pop k costs N + k(log2(N))
-            relevant_doc_tuples = sorted(similarity_by_document.items(), key=lambda t: t[1], reverse=True)
-            # Insert heap operations here
-            # relevant_doc_tuples = []
-            o.write(' '.join(map(lambda t: str(t[0]), relevant_doc_tuples[:top_n])))
+            docs_to_pop = min(len(tfidf_by_document), top_n)
+            most_relevant_docs = [-1 for i in range(docs_to_pop)]
+            relevant_docs = [(doc_tfidfs / lengths_by_document[doc_id], doc_id) \
+                for doc_id, doc_tfidfs in tfidf_by_document.items()]
+            heapify(relevant_docs)
+            for i in range(docs_to_pop):
+                most_relevant_docs[i] = str(heappop(relevant_docs)[1])
+            o.write(' '.join(most_relevant_docs))
             o.write('\n')
 
 def get_tfidf_weight(tf, df=0, N=0):
     tf_weight = 0
     if tf:
-        tf_weight = 1 + math.log10(tf)
+        tf_weight = 1 + log10(tf)
     if df:
-        idf_weight = math.log10(N / df)
+        idf_weight = log10(N / df)
     else:
         idf_weight = 1
     return tf_weight * idf_weight
-
-def get_cosine_similarity(np_array_a, np_array_b, a_is_unit=False, b_is_unit=False):
-    cos_value = np.dot(np_array_a, np_array_b)
-    if not a_is_unit:
-        cos_value /= np.linalg.norm(np_array_a)
-    if not b_is_unit:
-        cos_value /= np.linalg.norm(np_array_b)
-    return math.acos(cos_value)
 
 # Accepts a line and returns (set of stems, preprocessed line):
 # 1. Tokenize
