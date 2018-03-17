@@ -48,14 +48,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 node = postings.get_head()
                 while node is not None:
                     doc_id, doc_tf = node.get_data()
-                    if doc_id not in tfidf_by_document:
-                        tfidf_by_document[doc_id] = 0
-                    else:
-                        tfidf_by_document[doc_id] -= get_tfidf_weight(doc_tf, df, N) * query_tfidf
+                    tfidf_by_document[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
                     node = node.get_next()
             docs_to_pop = min(len(tfidf_by_document), top_n)
             most_relevant_docs = [-1 for i in range(docs_to_pop)]
-            relevant_docs = [(doc_tfidfs / lengths_by_document[doc_id], doc_id) \
+            relevant_docs = [(-doc_tfidfs / lengths_by_document[doc_id], doc_id) \
                 for doc_id, doc_tfidfs in tfidf_by_document.items()]
             heapify(relevant_docs)
             for i in range(docs_to_pop):
