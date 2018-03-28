@@ -78,7 +78,7 @@ def get_preprocessed(text):
     return Counter((stem for stems in sentences for stem in stems))
 
 def usage():
-    print('Usage: ' + sys.argv[0] + ' -i directory-of-documents -d dictionary-file -p postings-file')
+    print('Usage: ' + sys.argv[0] + ' -i dataset-file -d dictionary-file -p postings-file')
 
 input_directory_d = output_file_d = output_file_p = None
 try:

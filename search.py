@@ -7,14 +7,13 @@ import pickle
 import string
 
 from collections import Counter
-from heapq import heapify, heappop
 from math import log10
 from time import time
 
 from nltk.stem import PorterStemmer
 stemmer = PorterStemmer()
 
-from constants import lengths_file_name, top_n, print_time
+from constants import lengths_file_name, print_time
 from skip_list import SkipList
 
 start_time = time()
@@ -54,18 +53,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     doc_id, doc_tf = node.get_data()
                     tfidf_by_document[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
                     node = node.get_next()
-            docs_to_pop = min(len(tfidf_by_document), top_n) # e.g. min(total relevant docs, 10)
-            most_relevant_docs = [-1 for i in range(docs_to_pop)]
-            # We need to negate the tfidf values because Python's built-in heap is strictly min-heap
-            # Since comparison of heap elements is only mutable by overriding __lt__, we simply
-            # re-arrange the tuple so that the value to be compared (the tfidf) is the first value
-            # Tuple comparison is by first value, then second value if first values are equal, and etc
-            # We also do normalization by document length here
-            relevant_docs = [(-doc_tfidfs / lengths_by_document[doc_id], doc_id) \
-                for doc_id, doc_tfidfs in tfidf_by_document.items()]
-            heapify(relevant_docs) # in-place
-            for i in range(docs_to_pop):
-                most_relevant_docs[i] = str(heappop(relevant_docs)[1])
+            most_relevant_docs = sorted(tfidf_by_document.items(),
+                key=lambda id_tfidf_tuple: id_tfidf_tuple[1], reverse=True)
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
 
@@ -108,7 +97,7 @@ def load_stem(stem, postings_file_object):
     return dictionary[stem]
 
 def usage():
-    print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results')
+    print('Usage: ' + sys.argv[0] + ' -d dictionary-file -p postings-file -q query-file -o output-file-of-results')
 
 input_file_d = input_file_p = input_file_q = output_file_o = None
 try:
