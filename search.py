@@ -42,7 +42,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         # I.e. Duplicate stems are loaded only once
         for line in q:
             # Similar procedure as slide 38 of w7 lecture
-            stems, stemmed_query = get_preprocessed_query(line)
+            stems, stemmed_query = get_preprocessed_query(line) # TODO: Update this
             query_tfs = Counter(stemmed_query) # list of tokens -> {token: frequency}
             tfidf_by_document = {}
             for stem_index, stem in enumerate(stems):
@@ -67,21 +67,90 @@ def get_tfidf_weight(tf, df=0, N=0):
         idf_weight = log10(N / df)
     return tf_weight * idf_weight
 
-# Accepts a line and returns (set of stems, preprocessed line):
-# 1. Tokenize
-# 2. Strip punctuation from tokens
-# 3. Filter out non-alphabetical or stopword tokens
-# 4. Stem the remaining tokens
-def get_preprocessed_query(line):
-    query_tokens = map(
-        lambda token: token.strip(string.punctuation),
-        line.rstrip().lower().split(' '))
-    stemmed_query = list(map(
+# Accepts line and returns (set of stems, query in postfix list form)
+def parse_query(line):
+    stemmed_tokens = get_stemmed_query(line)
+    query_tokens = tokenize_by_parentheses(stemmed_tokens, is_string=False)
+    # TODO: Continue fixing from here
+    postfix_query = shunting_yard(query_tokens)
+    stemmed_postfix_query = []
+    stems = set()
+    for token in postfix_query:
+        if token in operators or token == '(' or token == ')':
+            stemmed_postfix_query.append(token)
+        else:
+            stem = stemmer.stem(token)
+            stems.add(stem)
+            stemmed_postfix_query.append(stem)
+    return (stems, stemmed_postfix_query)
+
+'''
+Accepts a line and returns (set of stems, preprocessed line):
+    0. Trim and case-fold
+    1. Tokenize by space
+    2. Strip punctuation from tokens
+    3. Filter out non-alphabetical tokens
+        (stopwords are kept because AND, NOT, OR are stopwords)
+    4. Stem the remaining tokens
+'''
+def get_stemmed_tokens(line):
+    return list(map(
         lambda token: stemmer.stem(token),
         filter(
-            lambda token: token.isalpha() and token not in stopwords,
-            query_tokens)))
-    return (set(stemmed_query), stemmed_query)
+            lambda token: token not in string.punctuation and token.isalpha(),
+            line.rstrip().lower().split(' ')
+            )
+        )
+    )
+
+# Accepts a string and returns a list of tokens where parentheses are tokenized into separate tokens
+def tokenize_by_parentheses(expression, is_string=True):
+    final_tokens = []
+    query = is_string ? expression.split(' ') : expression
+    for token in query:
+        inner_tokens = []
+        if token[0] == '(':
+            if token[-1] == ')':
+                inner_tokens = ['(', token[1:-1], ')']
+            else:
+                inner_tokens = ['(', token[1:]]
+        elif token[-1] == ')':
+            inner_tokens = [token[:-1], ')']
+        else:
+            inner_tokens = [token]
+        final_tokens.extend(inner_tokens)
+    return final_tokens
+
+# Accepts a list of tokens and returns a list of tokens in postfix form
+def shunting_yard(tokens):
+    output_queue = []
+    operator_stack = []
+    for token in tokens:
+        if token == '(':
+            operator_stack.append('(')
+        elif token == ')':
+            last_operator = peek(operator_stack, error='Mismatched parentheses in expression')
+            while last_operator != '(':
+                output_queue.append(operator_stack.pop())
+                last_operator = peek(operator_stack, error='Mismatched parentheses in expression')
+            operator_stack.pop()
+        elif token in operators:
+            while operator_stack:
+                last_operator = peek(operator_stack)
+                if (last_operator != '('
+                    and precedences[last_operator] >= precedences[token]):
+                    output_queue.append(operator_stack.pop())
+                else:
+                    break
+            operator_stack.append(token)
+        else:
+            output_queue.append(token)
+    while operator_stack:
+        last_operator = peek(operator_stack)
+        if last_operator == '(':
+            sys.exit('Mismatched parentheses in expression')
+        output_queue.append(operator_stack.pop())
+    return output_queue
 
 # Accepts a stem, a postings file handle, and
 # Returns the loaded postings skip list while storing it in memory
