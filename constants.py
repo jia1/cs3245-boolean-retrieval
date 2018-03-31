@@ -1,6 +1,10 @@
 lengths_file_name = 'lengths.txt'
+and_operator_name = 'and'
 
 identity = lambda x: x
+
+def is_operator(operator_name):
+    return operator_name == and_operator_name
 
 # Accepts a stack (list type) and returns the last element (also last-in)
 def peek(stack, error='Peek from empty stack'):

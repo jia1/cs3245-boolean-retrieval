@@ -1,3 +1,5 @@
+### WARNING: THIS SKIP LIST IMPLEMENTATION DOES NOT HAVE METHODS TO VERIFY OPERATOR ARITY ###
+
 from math import sqrt
 
 class SkipListNode:
@@ -67,3 +69,33 @@ class SkipList:
             data.append(node.get_data())
             node = node.get_next()
         return data
+
+    # Implementation of (skip list A).AND(skip list B) (Moved over from search.py)
+    # Accepts one skip list and returns a new skip list containing postings which both skip lists have
+    # Does skipping when the skip pointer node of one skip list has a value less than the other skip list node
+    def merge(skip_list_b):
+        merged_skip_list_data = []
+        node_a = self.get_head()
+        node_b = skip_list_b.get_head()
+        while node_a is not None and node_b is not None:
+            data_a = node_a.get_data()
+            data_b = node_b.get_data()
+            if data_a < data_b:
+                skip_node_a = node_a.get_skip()
+                if skip_node_a is not None and skip_node_a.get_data() <= data_b:
+                    node_a = skip_node_a
+                else:
+                    node_a = node_a.get_next()
+            elif data_b < data_a:
+                skip_node_b = node_b.get_skip()
+                if skip_node_b is not None and skip_node_b.get_data() <= data_a:
+                    node_b = skip_node_b
+                else:
+                    node_b = node_b.get_next()
+            else: # data_a == data_b:
+                merged_skip_list_data.append(data_a)
+                node_a = node_a.get_next()
+                node_b = node_b.get_next()
+        merged_skip_list = SkipList()
+        merged_skip_list.build_from(merged_skip_list_data)
+        return merged_skip_list

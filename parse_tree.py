@@ -1,6 +1,6 @@
 from collections import deque
 from skip_list import SkipList
-from constants import operators, identity, is_binary_operator, peek
+from constants import operators, identity, peek
 
 class ParseTreeNode:
     data = None
@@ -20,8 +20,6 @@ class ParseTreeNode:
     def is_leaf(self): return not self.has_left() and not self.has_right()
     def is_operand(self): return self.is_leaf()
     def is_operator(self): return not self.is_operand()
-    def is_unary_operator(self): return self.has_left() and not self.has_right()
-    def is_binary_operator(self): return self.has_left() and self.has_right()
 
     def get_data(self): return self.data
     def get_left(self): return self.left
@@ -85,11 +83,12 @@ class ParseTree:
                 left_node.set_parent(node)
                 node.set_left(left_node)
                 stack.pop()
-                if is_binary_operator(token):
-                    right_node = peek(stack, error='Insufficient number of operands')
-                    right_node.set_parent(node)
-                    node.set_right(right_node)
-                    stack.pop()
+                # Always binary operator
+                right_node = peek(stack, error='Insufficient number of operands')
+                right_node.set_parent(node)
+                node.set_right(right_node)
+                stack.pop()
+                # End of if binary operator block
                 stack.append(node)
         if stack:
             self.root = stack.pop()
