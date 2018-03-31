@@ -13,8 +13,9 @@ from time import time
 from nltk.stem import PorterStemmer
 stemmer = PorterStemmer()
 
-from constants import lengths_file_name, print_time
+from constants import lengths_file_name, peek, print_time
 from skip_list import SkipList
+from parse_tree import ParseTree
 
 start_time = time()
 
@@ -41,9 +42,48 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         # Process each query one-by-one but with the same resources
         # I.e. Duplicate stems are loaded only once
         for line in q:
+            stems, query = get_parsed_query(line) # string to list in postfix form
+
+            # Boolean retrieval (AND only)
+            parse_tree = build_tree(query, p) # list to parse tree
+            while root_node is not None and root_node.is_operator():
+                operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data())
+                # Recall that node.data is (number of postings, postings skip list) and as such the
+                # comparator compares nodes by the number of postings (tuple comparison is done by
+                # comparing the first element unless otherwise specified)
+                index = 0
+                while index < len(operand_nodes): # a loop to evaluate the smallest operand possible
+                    operand_node = operand_nodes[index]
+                    operator_node = operand_node.get_parent()
+                    operator = operator_node.get_data()
+                    # As specified in Assignment 4, always AND operator (binary operator)
+                    operand_node_a = operator_node.get_left()
+                    operand_node_b = operator_node.get_right()
+                    if operand_node_a.is_operator() or operand_node_b.is_operator():
+                        # The other operand is unevaluated (i.e. not a leaf, and still a subtree
+                        # with an operator as root) so we should look at the next operand with the
+                        # smallest number of postings
+                        index += 1
+                        continue
+                    key_a, operand_a = operand_node_a.get_data() # key_* is the document frequency
+                    key_b, operand_b = operand_node_b.get_data()
+                    operation = binary_operations[operator] # i.e. AND
+                    skip_list = operation(operand_a, operand_b)
+                    # Mutate the subtree root (an operator) into the new evaluated operand (a leaf)
+                    operator_node.set_data((skip_list.get_length(), skip_list))
+                    operator_node.set_left(None)
+                    operator_node.set_right(None)
+                    break
+            if root_node is not None: # is an operand
+                final_length, final_skip_list = root_node.get_data()
+                final_postings_list = map(str, final_skip_list.to_list())
+                o.write(' '.join(final_postings_list))
+            o.write('\n')
+
+            # TODO: Integrate this into post-boolean retrieval for ranking
+            # Vector space model
             # Similar procedure as slide 38 of w7 lecture
-            stems, stemmed_query = get_preprocessed_query(line) # TODO: Update this
-            query_tfs = Counter(stemmed_query) # list of tokens -> {token: frequency}
+            query_tfs = Counter(query) # list of tokens -> {token: frequency}
             tfidf_by_document = {}
             for stem_index, stem in enumerate(stems):
                 query_tfidf = get_tfidf_weight(query_tfs[stem])
@@ -67,22 +107,14 @@ def get_tfidf_weight(tf, df=0, N=0):
         idf_weight = log10(N / df)
     return tf_weight * idf_weight
 
-# Accepts line and returns (set of stems, query in postfix list form)
-def parse_query(line):
-    stemmed_tokens = get_stemmed_query(line)
-    query_tokens = tokenize_by_parentheses(stemmed_tokens, is_string=False)
-    # TODO: Continue fixing from here
-    postfix_query = shunting_yard(query_tokens)
-    stemmed_postfix_query = []
-    stems = set()
-    for token in postfix_query:
-        if token in operators or token == '(' or token == ')':
-            stemmed_postfix_query.append(token)
-        else:
-            stem = stemmer.stem(token)
-            stems.add(stem)
-            stemmed_postfix_query.append(stem)
-    return (stems, stemmed_postfix_query)
+# Accepts line and returns (set of stems, query in stemmed, postfix list form)
+def get_parsed_query(line):
+    stemmed_tokens = tokenize_by_parentheses(get_stemmed_tokens(line), is_string=False)
+    stemmed_postfix_tokens = shunting_yard(stemmed_tokens)
+    stems = set(filter(
+        lambda token: True # token not any of ['and', '(', ')']
+        postfix_query))
+    return (stems, stemmed_postfix_tokens)
 
 '''
 Accepts a line and returns (set of stems, preprocessed line):
