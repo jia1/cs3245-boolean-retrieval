@@ -28,27 +28,19 @@ Create a dictionary[stem] -> sorted([(doc id, tf)]) and write to the dictionary 
     - dictionary is a dictionary whose keys are stems and whose values are sorted posting lists
     - postings will then be converted into a skip list with sqrt(len(postings)) skip pointers 
 '''
-def do_indexing(documents_directory_name, dictionary_file_name, postings_file_name):
+def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
     dictionary = {}
     lengths_by_document = {}
     seen_postings_by_stem = {}
-    for root, directories, files in os.walk(documents_directory_name):
-        for posting in files:
-            with open(os.path.join(root, posting)) as f:
-                text = get_preprocessed(f.read()) # Counter type of {stem: frequency}
-                posting = int(posting.split('.')[0])
-                lengths_by_document[posting] = sum(text.values())
-                for stem, frequency in text.items():
-                    posting_frequency_tuple = (posting, frequency)
-                    if stem not in dictionary:
-                        dictionary[stem] = [posting_frequency_tuple]
-                        seen_postings_by_stem[stem] = set((posting,))
-                    else:
-                        if posting not in seen_postings_by_stem[stem]:
-                            bisect.insort(dictionary[stem], posting_frequency_tuple)
-                            seen_postings_by_stem[stem].add(posting)
-        N = len(files)
-        break
+    with open(csv_file_path, 'r') as f:
+        reader = csv.reader(f)
+        # Get column headers and move read pointer
+        # filter(None) helps remove falsey columns (e.g. blank)
+        # columns expected value = ['document_id', 'title', 'content', 'date_posted', 'court']
+        columns = list(filter(None, next(reader)))
+        for csv_row in reader:
+            doc_id, title, content, date_posted, court = csv_row
+            # TODO: Index all these things
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for stem in dictionary:
             d.write('{stem},{offset}\n'.format(stem=stem, offset=p.tell()))
