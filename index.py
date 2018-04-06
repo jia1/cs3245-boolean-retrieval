@@ -10,21 +10,20 @@ import pickle
 import sqlite3
 
 from collections import Counter
-from datetime import datetime
 from time import time
 
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 stemmer = PorterStemmer()
 
-from constants import lengths_file_name, print_time
+from constants import lengths_file_name, print_time, database_file_name, zones_table_name
 from skip_list import SkipList
 
-conn = sqlite3.connect('zones.db')
+conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
-c.execute('DROP TABLE IF EXISTS zones')
+c.execute('DROP TABLE IF EXISTS ?', zones_table_name)
 c.commit()
-c.execute('CREATE TABLE zones (document_id INTEGER, title TEXT, date_posted TEXT, court TEXT)')
+c.execute('CREATE TABLE ? (document_id INTEGER, title TEXT, date_posted TEXT, court TEXT)', zones_table_name)
 c.commit()
 
 start_time = time()
@@ -51,7 +50,8 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
             document_id, title, content, date_posted, court = csv_row
             document_id = int(document_id)
             # TODO: Index content here
-            c.execute('INSERT INTO zones VALUES (?, ?, ?, ?)', (document_id, title, date_posted, court))
+            c.execute('INSERT INTO ? VALUES (?, ?, ?, ?)',
+                (zones_table_name, document_id, title, date_posted, court))
     c.commit()
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for stem in dictionary:

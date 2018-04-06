@@ -5,6 +5,7 @@ import getopt
 
 import pickle
 import string
+import sqlite3
 
 from collections import Counter
 from math import log10
@@ -13,9 +14,12 @@ from time import time
 from nltk.stem import PorterStemmer
 stemmer = PorterStemmer()
 
-from constants import lengths_file_name, is_operator, peek, print_time
+from constants import lengths_file_name, is_operator, peek, print_time, database_file_name, zones_table_name
 from skip_list import SkipList
 from parse_tree import ParseTree
+
+conn = sqlite3.connect(database_file_name)
+c = conn.cursor()
 
 start_time = time()
 
@@ -43,6 +47,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         # I.e. Duplicate stems are loaded only once
         for line in q:
             # TODO: Must check if query is boolean query, current implementation assumes so
+            # TODO: Integrate zones and query expansion
             stems, query = get_parsed_query(line) # string to list in postfix form
             candidate_length, candidate_skip_list = boolean_retrieve(query)
             query_tfs = Counter(query) # list of tokens -> {token: frequency}

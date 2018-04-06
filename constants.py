@@ -1,3 +1,6 @@
+database_file_name = 'zones.db'
+zones_table_name = 'zones'
+
 lengths_file_name = 'lengths.txt'
 and_operator_name = 'and'
 
