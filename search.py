@@ -11,7 +11,7 @@ from collections import Counter
 from math import log10
 from time import time
 
-from nltk.lemma import WordNetLemmatizer
+from nltk.stem.wordnet import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
 
 from constants import lengths_file_name, print_time, database_file_name, zones_table_name
