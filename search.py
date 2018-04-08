@@ -49,7 +49,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             stems, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
             candidate_length, candidate_skip_list = boolean_retrieve(tokens_for_blr, p)
             query_tfs = Counter(tokens_for_vsm) # list of tokens -> {token: frequency}
-            tfidf_by_document = {}
+            tfidf_by_document_upp = {}
+            tfidf_by_document_low = {}
             if candidate_length:
                 for stem_index, stem in enumerate(stems):
                     query_tfidf = get_tfidf_weight(query_tfs[stem])
@@ -57,31 +58,31 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     # BEGIN procedure
                     # "merge" boolean retrieved postings with postings by term, only documents
                     # which exist in both skip lists will be considered in the rankings
-                    # TODO: Should do "high" and "low" lists (where low is equivalent to
-                    # documents which are not in candidate skip list)
                     node_a = candidate_skip_list.get_head() # i.e. first node of skip list
                     node_b = postings.get_head()
                     while node_a is not None and node_b is not None:
                         data_a = node_a.get_data()
                         data_b = node_b.get_data()
-                        if data_a < data_b:
-                            skip_node_a = node_a.get_skip()
-                            if skip_node_a is not None and skip_node_a.get_data() <= data_b:
-                                node_a = skip_node_a
-                            else:
-                                node_a = node_a.get_next()
-                        elif data_b < data_a:
-                            skip_node_b = node_b.get_skip()
-                            if skip_node_b is not None and skip_node_b.get_data() <= data_a:
-                                node_b = skip_node_b
-                            else:
-                                node_b = node_b.get_next()
+                        doc_id, doc_tf = data_b
+                        if data_a != data_b:
+                            tfidf_by_document_low[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
+                            if data_a < data_b:
+                                skip_node_a = node_a.get_skip()
+                                if skip_node_a is not None and skip_node_a.get_data() <= data_b:
+                                    node_a = skip_node_a
+                                else:
+                                    node_a = node_a.get_next()
+                            elif data_b < data_a:
+                                skip_node_b = node_b.get_skip()
+                                if skip_node_b is not None and skip_node_b.get_data() <= data_a:
+                                    node_b = skip_node_b
+                                else:
+                                    node_b = node_b.get_next()
                         else:
-                            doc_id, doc_tf = data_b
                             # The following line is the sole difference between merge and this procedure
                             # I could have called merge first then act on the merged skip list, but that
                             # would incur a longer runtime (i.e. need to iterate the merged skip list)
-                            tfidf_by_document[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
+                            tfidf_by_document_upp[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
                             node_a = node_a.get_next()
                             node_b = node_b.get_next()
                     # END procedure
@@ -94,10 +95,13 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     node_b = postings.get_head()
                     while node_b is not None:
                         doc_id, doc_tf = node_b.get_data()
-                        tfidf_by_document[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
+                        tfidf_by_document_upp[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
                         node_b = node_b.get_next()
-            most_relevant_docs = sorted(tfidf_by_document.items(),
+            most_relevant_docs = sorted(tfidf_by_document_upp.items(),
                 key=lambda id_tfidf_tuple: id_tfidf_tuple[1], reverse=True)
+            less_relevant_docs = sorted(tfidf_by_document_low.items(),
+                key=lambda id_tfidf_tuple: id_tfidf_tuple[1], reverse=True)
+            most_relevant_docs.extend(less_relevant_docs)
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
