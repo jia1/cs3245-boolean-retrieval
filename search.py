@@ -115,8 +115,10 @@ def boolean_retrieve(tokens, p):
         tokens
         )
     )
-    sorted_skip_lists = sorted(skip_lists) # lowest df to highest df
-    # TODO: Reduction from sorted list of skip lists to single skip list
+    merged_skip_list = reduce(
+        lambda skip_list_a, skip_list_b: skip_list_a.merge(skip_list_b),
+        sorted(skip_lists)) # sorted by lowest to highest df
+    return (merged_skip_list.get_length(), merged_skip_list)
 
 '''
 TODO: Document this function
