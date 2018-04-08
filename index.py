@@ -21,10 +21,11 @@ from skip_list import SkipList
 
 conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
-c.execute('DROP TABLE IF EXISTS ?', zones_table_name)
-c.commit()
-c.execute('CREATE TABLE ? (document_id INTEGER, title TEXT, date_posted TEXT, court TEXT)', zones_table_name)
-c.commit()
+c.execute('DROP TABLE IF EXISTS {}'.format(zones_table_name))
+conn.commit()
+c.execute('CREATE TABLE {} (document_id INTEGER, title TEXT, date_posted TEXT, court TEXT)'
+    .format(zones_table_name))
+conn.commit()
 
 start_time = time()
 
@@ -60,9 +61,10 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
                         bisect.insort(dictionary[lemma], posting)
                         seen_postings_by_lemma[lemma].add(posting)
             # END procedure
-            c.execute('INSERT INTO ? VALUES (?, ?, ?, ?)',
-                (zones_table_name, document_id, title, date_posted, court))
-    c.commit()
+            c.execute('INSERT INTO {} VALUES (?, ?, ?, ?)'.format(zones_table_name),
+                (document_id, title, date_posted, court))
+    conn.commit()
+    conn.close()
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for lemma in dictionary:
             d.write('{lemma},{offset}\n'.format(lemma=lemma, offset=p.tell()))
