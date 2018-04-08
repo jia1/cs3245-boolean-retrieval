@@ -104,11 +104,13 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             o.write('\n')
             break # because 1 query per file
 
-# Boolean retrieval routine (AND only)
-# Accepts a list of tokens and returns:
-#   tuple(postings length, postings skip list)
-# where data of skip list node is (i.e. node.get_data()):
-#   tuple(doc id, term frequency)
+'''
+Boolean retrieval routine (AND only)
+Accepts a list of tokens and returns:
+    tuple(postings length, postings skip list)
+where data of skip list node (i.e. node.get_data()) is:
+    tuple(doc id, term frequency)
+'''
 def boolean_retrieve(tokens, p):
     if not tokens:
         return (0, SkipList())
@@ -123,10 +125,13 @@ def boolean_retrieve(tokens, p):
     return (merged_skip_list.get_length(), merged_skip_list)
 
 '''
-TODO: Document this function
+Accepts a line and returns:
+    (set of lemmas, lemmas for boolean retrieval, lemmas for vector space model)
+Lemmas for boolean retrieval remains as []
+    if there are no 'AND' case-sensitive substrings in the line
 '''
 def get_parsed_query(line):
-    operands = line.rstrip().split(and_operator_name.upper()) # assumes boolean operator is 'AND' only
+    operands = line.rstrip().split(and_operator_name.upper()) # assumes boolean operator is only 'AND'
     tokens_for_blr = []
     tokens_for_vsm = []
     if len(operands) > 1:
