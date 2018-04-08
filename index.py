@@ -7,6 +7,8 @@ import os
 import string
 import bisect
 import pickle
+
+import csv
 import sqlite3
 
 from collections import Counter
@@ -27,6 +29,16 @@ c.execute('CREATE TABLE {} (document_id INTEGER, title TEXT, date_posted TEXT, c
     .format(zones_table_name))
 conn.commit()
 
+# Adapted from: https://stackoverflow.com/a/15063941
+max_int = sys.maxsize
+should_decrement = True
+while should_decrement:
+    try:
+        csv.field_size_limit(max_int)
+        should_decrement = False
+    except OverflowError:
+        max_int = int(max_int / 2)
+
 start_time = time()
 
 with open('stopwords.txt') as f:
@@ -41,7 +53,7 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
     dictionary = {}
     lengths_by_document = {}
     seen_postings_by_lemma = {}
-    with open(csv_file_path, 'r') as f:
+    with open(csv_file_path, 'r', errors='ignore') as f:
         reader = csv.reader(f)
         # Get column headers and move read pointer
         # filter(None) helps remove falsey columns (e.g. blank)
@@ -49,6 +61,7 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
         columns = list(filter(None, next(reader)))
         for csv_row in reader:
             document_id, title, content, date_posted, court = csv_row
+            print(document_id, end=' ')
             # BEGIN procedure index content
             text = get_preprocessed(content)
             posting = int(document_id)
