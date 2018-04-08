@@ -11,8 +11,8 @@ from collections import Counter
 from math import log10
 from time import time
 
-from nltk.stem import PorterStemmer
-stemmer = PorterStemmer()
+from nltk.lemma import WordNetLemmatizer
+lemmatizer = WordNetLemmatizer()
 
 from constants import lengths_file_name, print_time, database_file_name, zones_table_name
 from skip_list import SkipList
@@ -35,26 +35,26 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         open(lengths_file_name, 'rb') as l:
         # Build the offsets dictionary for seeking later
         for line in d:
-            stem, offset = line.rstrip().split(',')
-            offsets[stem] = int(offset)
+            lemma, offset = line.rstrip().split(',')
+            offsets[lemma] = int(offset)
         # Load the following data from the lengths file:
         # 1. Total number of documents in the collection
         # 2. Length of each document (key is the doc_id)
         N = pickle.load(l)
         lengths_by_document = pickle.load(l)
         # Process each query one-by-one but with the same resources
-        # I.e. Duplicate stems are loaded only once
+        # I.e. Duplicate lemmas are loaded only once
         for line in q:
             # TODO: Integrate zones and query expansion
-            stems, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
+            lemmas, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
             candidate_length, candidate_skip_list = boolean_retrieve(tokens_for_blr, p)
             query_tfs = Counter(tokens_for_vsm) # list of tokens -> {token: frequency}
             tfidf_by_document_upp = {}
             tfidf_by_document_low = {}
             if candidate_length:
-                for stem_index, stem in enumerate(stems):
-                    query_tfidf = get_tfidf_weight(query_tfs[stem])
-                    df, postings = load_stem(stem, p)
+                for lemma_index, lemma in enumerate(lemmas):
+                    query_tfidf = get_tfidf_weight(query_tfs[lemma])
+                    df, postings = load_lemma(lemma, p)
                     # BEGIN procedure
                     # "merge" boolean retrieved postings with postings by term
                     # Documents which exist in both skip lists will be considered in the upper rankings
@@ -87,9 +87,9 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             else:
                 # Pure vector space model because boolean retrieved postings is empty
                 # Similar procedure to slide 38 of w7 lecture
-                for stem_index, stem in enumerate(stems):
-                    query_tfidf = get_tfidf_weight(query_tfs[stem])
-                    df, postings = load_stem(stem, p)
+                for lemma_index, lemma in enumerate(lemmas):
+                    query_tfidf = get_tfidf_weight(query_tfs[lemma])
+                    df, postings = load_lemma(lemma, p)
                     node_b = postings.get_head()
                     while node_b is not None:
                         doc_id, doc_tf = node_b.get_data()
@@ -113,7 +113,7 @@ def boolean_retrieve(tokens, p):
     if not tokens:
         return (0, SkipList())
     skip_lists = list(map(
-        lambda token: load_stem(token, p), # (df, postings)
+        lambda token: load_lemma(token, p), # (df, postings)
         tokens
         )
     )
@@ -132,7 +132,7 @@ def get_parsed_query(line):
     if len(operands) > 1:
         operands = map(
             lambda operand: map(
-                lambda token: stemmer.stem(token),
+                lambda token: lemmatizer.lemmatize(token),
                 filter(
                     lambda token: is_significant_token(token),
                     operand.strip(string.punctuation).lower().split(' ')
@@ -149,18 +149,18 @@ def get_parsed_query(line):
 def is_significant_token(token):
     return token not in string.punctuation and token.isalpha() and token not in stopwords
 
-# Accepts a stem, a postings file handle, and
+# Accepts a lemma, a postings file handle, and
 # Returns the loaded postings skip list while storing it in memory
-def load_stem(stem, postings_file_object):
+def load_lemma(lemma, postings_file_object):
     global dictionary
-    if stem in dictionary:
-        return dictionary[stem]
+    if lemma in dictionary:
+        return dictionary[lemma]
     postings = SkipList()
-    if stem in offsets:
-        postings_file_object.seek(offsets[stem])
+    if lemma in offsets:
+        postings_file_object.seek(offsets[lemma])
         postings.build_from(pickle.load(postings_file_object))
-    dictionary[stem] = (postings.get_length(), postings)
-    return dictionary[stem]
+    dictionary[lemma] = (postings.get_length(), postings)
+    return dictionary[lemma]
 
 def get_tfidf_weight(tf, df=0, N=0):
     tf_weight = 0
