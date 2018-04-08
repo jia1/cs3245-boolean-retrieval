@@ -14,9 +14,8 @@ from time import time
 from nltk.stem import PorterStemmer
 stemmer = PorterStemmer()
 
-from constants import lengths_file_name, is_operator, peek, print_time, database_file_name, zones_table_name
+from constants import lengths_file_name, print_time, database_file_name, zones_table_name
 from skip_list import SkipList
-from parse_tree import ParseTree
 
 conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
@@ -46,11 +45,10 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         # Process each query one-by-one but with the same resources
         # I.e. Duplicate stems are loaded only once
         for line in q:
-            # TODO: Must check if query is boolean query, current implementation assumes so
             # TODO: Integrate zones and query expansion
-            stems, query = get_parsed_query(line) # string to list in postfix form
-            candidate_length, candidate_skip_list = boolean_retrieve(query)
-            query_tfs = Counter(query) # list of tokens -> {token: frequency}
+            stems, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
+            candidate_length, candidate_skip_list = boolean_retrieve(tokens_for_blr, p)
+            query_tfs = Counter(tokens_for_vsm) # list of tokens -> {token: frequency}
             tfidf_by_document = {}
             if candidate_length:
                 for stem_index, stem in enumerate(stems):
@@ -59,6 +57,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     # BEGIN procedure
                     # "merge" boolean retrieved postings with postings by term, only documents
                     # which exist in both skip lists will be considered in the rankings
+                    # TODO: Should do "high" and "low" lists (where low is equivalent to
+                    # documents which are not in candidate skip list)
                     node_a = candidate_skip_list.get_head() # i.e. first node of skip list
                     node_b = postings.get_head()
                     while node_a is not None and node_b is not None:
@@ -103,136 +103,47 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             break # because 1 query per file
 
 # Boolean retrieval routine (AND only)
-# Accepts a stemmed, postfix form query (list of tokens) and returns:
+# Accepts a list of tokens and returns:
 #   tuple(postings length, postings skip list)
 # where data of skip list node is (i.e. node.get_data()):
 #   tuple(doc id, term frequency)
-def boolean_retrieve(stemmed_postfix_query):
-    parse_tree = build_tree(stemmed_postfix_query, p)
-    while root_node is not None and root_node.is_operator():
-        operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data())
-        # Recall that node.data is (document frequency, postings skip list) and as such the
-        # comparator compares nodes by the number of postings (tuple comparison is done by
-        # comparing the first element unless otherwise specified)
-        # Format of skip list data: (document id, term frequency)
-        index = 0
-        while index < len(operand_nodes): # a loop to evaluate the smallest operand possible
-            operand_node = operand_nodes[index]
-            operator_node = operand_node.get_parent()
-            operator = operator_node.get_data()
-            if not is_operator(operator):
-                sys.exit('Illegal non-AND operator in query')
-            # No need to check if unary or binary operator because always AND
-            operand_node_a = operator_node.get_left()
-            operand_node_b = operator_node.get_right()
-            if operand_node_a.is_operator() or operand_node_b.is_operator():
-                # The other operand is unevaluated (i.e. not a leaf, and still a subtree
-                # with an operator as root) so we should look at the next operand with the
-                # smallest number of postings
-                index += 1
-                continue
-            key_a, operand_a = operand_node_a.get_data() # key_* is the document frequency
-            key_b, operand_b = operand_node_b.get_data()
-            skip_list = operand_a.merge(operand_b)
-            # Mutate the subtree root (an operator) into the new evaluated operand (a leaf)
-            operator_node.set_data((skip_list.get_length(), skip_list))
-            operator_node.set_left(None)
-            operator_node.set_right(None)
-            break
-    if root_node is not None: # is an operand
-        return root_node.get_data() # i.e. (number of candidate documents, candidate postings)
-    return (0, SkipList())
-
-# Accepts line and returns (set of stems, query in stemmed, postfix list form)
-def get_parsed_query(line):
-    stemmed_tokens = tokenize_by_parentheses(get_stemmed_tokens(line), is_string=False)
-    stemmed_postfix_tokens = shunting_yard(stemmed_tokens)
-    stems = set(filter(
-        lambda token: not (is_operator(token) or token == '(' or token == ')') # i.e. is operand
-        postfix_query))
-    return (stems, stemmed_postfix_tokens)
-
-'''
-Accepts a line and returns (set of stems, preprocessed line):
-    0. Trim and case-fold
-    1. Tokenize by space
-    2. Strip punctuation from tokens
-    3. Filter out non-alphabetical tokens
-        (stopwords are kept because AND, NOT, OR are stopwords)
-    4. Stem the remaining tokens
-'''
-def get_stemmed_tokens(line):
-    return list(map(
-        lambda token: stemmer.stem(token),
-        filter(
-            lambda token: token not in string.punctuation and token.isalpha(),
-            line.rstrip().lower().split(' ')
-            )
+def boolean_retrieve(tokens, p):
+    if not tokens:
+        return (0, SkipList())
+    skip_lists = list(map(
+        lambda token: load_stem(token, p), # (df, postings)
+        tokens
         )
     )
+    sorted_skip_lists = sorted(skip_lists) # lowest df to highest df
+    # TODO: Reduction from sorted list of skip lists to single skip list
 
-# Accepts a string and returns a list of tokens where parentheses are tokenized into separate tokens
-def tokenize_by_parentheses(expression, is_string=True):
-    final_tokens = []
-    query = is_string ? expression.split(' ') : expression
-    for token in query:
-        inner_tokens = []
-        if token[0] == '(':
-            if token[-1] == ')':
-                inner_tokens = ['(', token[1:-1], ')']
-            else:
-                inner_tokens = ['(', token[1:]]
-        elif token[-1] == ')':
-            inner_tokens = [token[:-1], ')']
-        else:
-            inner_tokens = [token]
-        final_tokens.extend(inner_tokens)
-    return final_tokens
+'''
+TODO: Document this function
+'''
+def get_parsed_query(line):
+    operands = line.rstrip().split(and_operator_name.upper()) # assumes boolean operator is 'AND' only
+    tokens_for_blr = []
+    tokens_for_vsm = []
+    if len(operands) > 1:
+        operands = map(
+            lambda operand: map(
+                lambda token: stemmer.stem(token),
+                filter(
+                    lambda token: is_significant_token(token),
+                    operand.strip(string.punctuation).lower().split(' ')
+                    )
+                ),
+            operands)
+        for tokens in operands:
+            tokens_for_blr.extend(tokens)
+        tokens_for_vsm = tokens_for_blr
+    else: # no boolean operators found (i.e. do pure vector space model retrieval)
+        tokens_for_vsm = operands
+    return (set(tokens_for_vsm), tokens_for_blr, tokens_for_vsm)
 
-# Accepts a list of tokens and returns a list of tokens in postfix form
-def shunting_yard(tokens):
-    output_queue = []
-    operator_stack = []
-    for token in tokens:
-        if token == '(':
-            operator_stack.append('(')
-        elif token == ')':
-            last_operator = peek(operator_stack, error='Mismatched parentheses in expression')
-            while last_operator != '(':
-                output_queue.append(operator_stack.pop())
-                last_operator = peek(operator_stack, error='Mismatched parentheses in expression')
-            operator_stack.pop()
-        elif token in operators:
-            while operator_stack:
-                last_operator = peek(operator_stack)
-                if (last_operator != '('
-                    and precedences[last_operator] >= precedences[token]):
-                    output_queue.append(operator_stack.pop())
-                else:
-                    break
-            operator_stack.append(token)
-        else:
-            output_queue.append(token)
-    while operator_stack:
-        last_operator = peek(operator_stack)
-        if last_operator == '(':
-            sys.exit('Mismatched parentheses in expression')
-        output_queue.append(operator_stack.pop())
-    return output_queue
-
-# Accepts a query in postfix list form (i.e. the second return value from get_parsed_query function) and
-# Returns a parse tree of parse tree nodes (see parse_tree.py)
-def build_tree(postfix_query, postings_file_object):
-    postfix_expression = []
-    for token in postfix_query:
-        if token == merge_operator_name: # always AND
-            postfix_expression.append(token)
-        else:
-            postings_tuple = load_stem(token, postings_file_object)
-            postfix_expression.append(postings_tuple)
-    tree = ParseTree()
-    tree.build_from(postfix_expression)
-    return tree
+def is_significant_token(token):
+    return token not in string.punctuation and token.isalpha() and token not in stopwords
 
 # Accepts a stem, a postings file handle, and
 # Returns the loaded postings skip list while storing it in memory
