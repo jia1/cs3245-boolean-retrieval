@@ -48,8 +48,18 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
         columns = list(filter(None, next(reader)))
         for csv_row in reader:
             document_id, title, content, date_posted, court = csv_row
-            document_id = int(document_id)
-            # TODO: Index content here
+            # BEGIN procedure index content
+            text = get_preprocessed(content)
+            posting = int(document_id)
+            for lemma in text:
+                if lemma not in dictionary:
+                    dictionary[lemma] = [posting]
+                    seen_postings_by_lemma[lemma] = set((posting,))
+                else:
+                    if posting not in seen_postings_by_lemma[lemma]:
+                        bisect.insort(dictionary[lemma], posting)
+                        seen_postings_by_lemma[lemma].add(posting)
+            # END procedure
             c.execute('INSERT INTO ? VALUES (?, ?, ?, ?)',
                 (zones_table_name, document_id, title, date_posted, court))
     c.commit()
