@@ -56,8 +56,9 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     query_tfidf = get_tfidf_weight(query_tfs[stem])
                     df, postings = load_stem(stem, p)
                     # BEGIN procedure
-                    # "merge" boolean retrieved postings with postings by term, only documents
-                    # which exist in both skip lists will be considered in the rankings
+                    # "merge" boolean retrieved postings with postings by term
+                    # Documents which exist in both skip lists will be considered in the upper rankings
+                    # while those which exist only in the term skip list are moved to the lower rankings
                     node_a = candidate_skip_list.get_head() # i.e. first node of skip list
                     node_b = postings.get_head()
                     while node_a is not None and node_b is not None:
@@ -79,9 +80,6 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                                 else:
                                     node_b = node_b.get_next()
                         else:
-                            # The following line is the sole difference between merge and this procedure
-                            # I could have called merge first then act on the merged skip list, but that
-                            # would incur a longer runtime (i.e. need to iterate the merged skip list)
                             tfidf_by_document_upp[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
                             node_a = node_a.get_next()
                             node_b = node_b.get_next()
