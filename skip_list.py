@@ -73,7 +73,7 @@ class SkipList:
     # Implementation of (skip list A).AND(skip list B) (Moved over from search.py)
     # Accepts one skip list and returns a new skip list containing postings which both skip lists have
     # Does skipping when the skip pointer node of one skip list has a value less than the other skip list node
-    def merge(skip_list_b):
+    def merge(self, skip_list_b):
         merged_skip_list_data = []
         node_a = self.get_head()
         node_b = skip_list_b.get_head()

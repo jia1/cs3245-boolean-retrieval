@@ -60,22 +60,23 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
         # columns expected value = ['document_id', 'title', 'content', 'date_posted', 'court']
         columns = list(filter(None, next(reader)))
         N = 0
-        for i in range(10): # Scale down for testing
-        # for csv_row in reader:
-            csv_row = next(reader) # Remove if not testing
+        # for csv_row in reader: # Uncomment this line if not testing
+        for i in range(100): # Comment this line if not testing
+            csv_row = next(reader) # Comment this line if not testing
             N += 1
             document_id, title, content, date_posted, court = csv_row
-            # BEGIN procedure index content
+            # BEGIN procedure index content (i.e. vector space model indexing)
             text = get_preprocessed(content)
             posting = int(document_id)
             lengths_by_document[posting] = sum(text.values())
-            for lemma in text:
+            for lemma, frequency in text.items():
+                posting_frequency_tuple = (posting, frequency)
                 if lemma not in dictionary:
-                    dictionary[lemma] = [posting]
+                    dictionary[lemma] = [posting_frequency_tuple]
                     seen_postings_by_lemma[lemma] = set((posting,))
                 else:
                     if posting not in seen_postings_by_lemma[lemma]:
-                        bisect.insort(dictionary[lemma], posting)
+                        bisect.insort(dictionary[lemma], posting_frequency_tuple)
                         seen_postings_by_lemma[lemma].add(posting)
             # END procedure
             c.execute('INSERT INTO {} VALUES (?, ?, ?, ?)'.format(zones_table_name),

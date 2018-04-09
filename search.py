@@ -8,13 +8,14 @@ import string
 import sqlite3
 
 from collections import Counter
+from functools import reduce
 from math import log10
 from time import time
 
 from nltk.stem.wordnet import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
 
-from constants import lengths_file_name, print_time, database_file_name, zones_table_name
+from constants import lengths_file_name, print_time, and_operator_name, database_file_name, zones_table_name
 from skip_list import SkipList
 
 conn = sqlite3.connect(database_file_name)
@@ -30,7 +31,7 @@ with open('stopwords.txt') as f:
 
 # MAIN function for search.py
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
-    with open(dictionary_file_name) as d, open(postings_file_name, 'rb') as p, \
+    with open(dictionary_file_name, errors='ignore') as d, open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, open(output_file_name, 'w') as o, \
         open(lengths_file_name, 'rb') as l:
         # Build the offsets dictionary for seeking later
@@ -95,10 +96,21 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                         doc_id, doc_tf = node_b.get_data()
                         tfidf_by_document_upp[doc_id] = get_tfidf_weight(doc_tf, df, N) * query_tfidf
                         node_b = node_b.get_next()
-            most_relevant_docs = sorted(tfidf_by_document_upp.items(),
-                key=lambda id_tfidf_tuple: id_tfidf_tuple[1], reverse=True)
-            less_relevant_docs = sorted(tfidf_by_document_low.items(),
-                key=lambda id_tfidf_tuple: id_tfidf_tuple[1], reverse=True)
+            most_relevant_docs = list(map(
+                lambda id_tfidf_tuple: str(id_tfidf_tuple[0]),
+                sorted(
+                    tfidf_by_document_upp.items(),
+                    key=lambda id_tfidf_tuple: id_tfidf_tuple[1],
+                    reverse=True)
+                )
+            )
+            less_relevant_docs = map(
+                lambda id_tfidf_tuple: str(id_tfidf_tuple[0]),
+                sorted(
+                    tfidf_by_document_low.items(),
+                    key=lambda id_tfidf_tuple: id_tfidf_tuple[1],
+                    reverse=True)
+                )
             most_relevant_docs.extend(less_relevant_docs)
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
@@ -114,14 +126,17 @@ where data of skip list node (i.e. node.get_data()) is:
 def boolean_retrieve(tokens, p):
     if not tokens:
         return (0, SkipList())
-    skip_lists = list(map(
-        lambda token: load_lemma(token, p), # (df, postings)
-        tokens
+    sorted_skip_lists = map(
+        lambda df_postings_tuple: df_postings_tuple[1],
+        sorted(
+            list(map(
+                lambda token: load_lemma(token, p),
+                tokens
+            )))
         )
-    )
     merged_skip_list = reduce(
         lambda skip_list_a, skip_list_b: skip_list_a.merge(skip_list_b),
-        sorted(skip_lists)) # sorted by lowest to highest df
+        sorted_skip_lists)
     return (merged_skip_list.get_length(), merged_skip_list)
 
 '''
@@ -134,21 +149,22 @@ def get_parsed_query(line):
     operands = line.rstrip().split(and_operator_name.upper()) # assumes boolean operator is only 'AND'
     tokens_for_blr = []
     tokens_for_vsm = []
-    if len(operands) > 1:
-        operands = map(
-            lambda operand: map(
-                lambda token: lemmatizer.lemmatize(token),
-                filter(
-                    lambda token: is_significant_token(token),
-                    operand.strip(string.punctuation).lower().split(' ')
-                    )
-                ),
-            operands)
-        for tokens in operands:
-            tokens_for_blr.extend(tokens)
-        tokens_for_vsm = tokens_for_blr
-    else: # no boolean operators found (i.e. do pure vector space model retrieval)
-        tokens_for_vsm = operands
+    if operands:
+        if len(operands) > 1:
+            operands = map(
+                lambda operand: map(
+                    lambda token: lemmatizer.lemmatize(token),
+                    filter(
+                        lambda token: is_significant_token(token),
+                        operand.strip(string.punctuation).lower().split(' ')
+                        )
+                    ),
+                operands)
+            for tokens in operands:
+                tokens_for_blr.extend(tokens)
+            tokens_for_vsm = tokens_for_blr
+        else: # no boolean operators found (i.e. do pure vector space model retrieval)
+            tokens_for_vsm = operands[0].split(' ')
     return (set(tokens_for_vsm), tokens_for_blr, tokens_for_vsm)
 
 def is_significant_token(token):
