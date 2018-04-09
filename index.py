@@ -60,9 +60,9 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
         # columns expected value = ['document_id', 'title', 'content', 'date_posted', 'court']
         columns = list(filter(None, next(reader)))
         N = 0
-        # for csv_row in reader: # Uncomment this line if not testing
-        for i in range(100): # Comment this line if not testing
-            csv_row = next(reader) # Comment this line if not testing
+        for csv_row in reader: # Uncomment this line if not testing
+        # for i in range(100): # Comment this line if not testing
+            # csv_row = next(reader) # Comment this line if not testing
             N += 1
             document_id, title, content, date_posted, court = csv_row
             # BEGIN procedure index content (i.e. vector space model indexing)
