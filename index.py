@@ -21,6 +21,9 @@ lemmatizer = WordNetLemmatizer()
 from constants import lengths_file_name, print_time, database_file_name, zones_table_name
 from skip_list import SkipList
 
+nltk.download('punkt')
+nltk.download('wordnet')
+
 conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
 c.execute('DROP TABLE IF EXISTS {}'.format(zones_table_name))
