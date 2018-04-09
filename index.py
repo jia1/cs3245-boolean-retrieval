@@ -21,7 +21,6 @@ lemmatizer = WordNetLemmatizer()
 from constants import lengths_file_name, print_time, database_file_name, zones_table_name
 from skip_list import SkipList
 
-'''
 conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
 c.execute('DROP TABLE IF EXISTS {}'.format(zones_table_name))
@@ -29,7 +28,6 @@ conn.commit()
 c.execute('CREATE TABLE {} (document_id INTEGER, title TEXT, date_posted TEXT, court TEXT)'
     .format(zones_table_name))
 conn.commit()
-'''
 
 # Adapted from: https://stackoverflow.com/a/15063941
 max_int = sys.maxsize
@@ -62,14 +60,15 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
         # columns expected value = ['document_id', 'title', 'content', 'date_posted', 'court']
         columns = list(filter(None, next(reader)))
         N = 0
-        for csv_row in reader:
+        for i in range(10): # Scale down for testing
+        # for csv_row in reader:
+            csv_row = next(reader) # Remove if not testing
             N += 1
             document_id, title, content, date_posted, court = csv_row
             # BEGIN procedure index content
             text = get_preprocessed(content)
             posting = int(document_id)
             lengths_by_document[posting] = sum(text.values())
-            '''
             for lemma in text:
                 if lemma not in dictionary:
                     dictionary[lemma] = [posting]
@@ -88,7 +87,6 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
             d.write('{lemma},{offset}\n'.format(lemma=lemma, offset=p.tell()))
             postings = dictionary[lemma]
             pickle.dump(postings, p)
-    '''
     with open(lengths_file_name, 'wb') as l:
         pickle.dump(N, l)
         pickle.dump(lengths_by_document, l)
