@@ -201,7 +201,6 @@ if input_file_d == None or input_file_p == None or input_file_q == None or outpu
     sys.exit(2)
 
 do_searching(input_file_d, input_file_p, input_file_q, output_file_o)
-
 stop_time = time()
-
 print_time(start_time, stop_time)
+conn.close()

@@ -81,7 +81,6 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
             c.execute('INSERT INTO {} VALUES (?, ?, ?, ?)'.format(zones_table_name),
                 (document_id, title, date_posted, court))
     conn.commit()
-    conn.close()
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for lemma in dictionary:
             d.write('{lemma},{offset}\n'.format(lemma=lemma, offset=p.tell()))
@@ -133,7 +132,6 @@ if input_directory_d == None or output_file_d == None or output_file_p == None:
     sys.exit(2)
 
 do_indexing(input_directory_d, output_file_d, output_file_p)
-
 stop_time = time()
-
 print_time(start_time, stop_time)
+conn.close()
