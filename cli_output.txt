@@ -1,1 +1,4 @@
 (cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python index.py -i ..\dataset\dataset.csv -d dictionary.txt -p postings.txt
+
+(cs3245-boolean-retrieval) jiayee:cs3245-information-retrieval jiayee$ python3 index.py -i ../dataset/dataset.csv -d dictionary.txt -p postings.txt
+Time taken: 2154.93677 seconds
