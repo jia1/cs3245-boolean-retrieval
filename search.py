@@ -17,10 +17,10 @@ lemmatizer = WordNetLemmatizer()
 
 from constants import lengths_file_name, print_time, and_operator_name, database_file_name, zones_table_name
 from skip_list import SkipList
-
+'''
 conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
-
+'''
 start_time = time()
 
 dictionary = {}
@@ -219,4 +219,4 @@ if input_file_d == None or input_file_p == None or input_file_q == None or outpu
 do_searching(input_file_d, input_file_p, input_file_q, output_file_o)
 stop_time = time()
 print_time(start_time, stop_time)
-conn.close()
+# conn.close()
