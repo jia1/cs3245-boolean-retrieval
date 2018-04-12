@@ -35,7 +35,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             parse_tree = build_tree(stemmed_postfix_query, p) # list to parse tree
             root_node = parse_tree.get_root()
             while root_node is not None and root_node.is_operator():
-                operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data())
+                operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data().get_length())
                 # Recall that node.data is (number of postings, postings skip list) and as such the
                 # comparator compares nodes by the number of postings (tuple comparison is done by
                 # comparing the first element unless otherwise specified)
