@@ -12,10 +12,19 @@ from functools import reduce
 from math import log10
 from time import time
 
+from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
 
-from constants import lengths_file_name, print_time, and_operator_name, database_file_name, zones_table_name
+from constants import (
+    lengths_file_name,
+    nltk_offsets_file_name,
+    nltk_texts_file_name,
+    database_file_name,
+    zones_table_name,
+    and_operator_name,
+    print_time
+    )
 from skip_list import SkipList
 '''
 conn = sqlite3.connect(database_file_name)
@@ -24,30 +33,42 @@ c = conn.cursor()
 start_time = time()
 
 dictionary = {}
-offsets = {}
+postings_offsets = {} # { lemma: postings offset }
+nltk_text_offsets = {} # { doc_id: texts offset }
 
 with open('stopwords.txt') as f:
     stopwords = set(map(lambda ln: ln.strip(), f.readlines()))
 
 # MAIN function for search.py
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
-    with open(dictionary_file_name, errors='ignore') as d, open(postings_file_name, 'rb') as p, \
-        open(queries_file_name) as q, open(output_file_name, 'w') as o, \
-        open(lengths_file_name, 'rb') as l:
-        # Build the offsets dictionary for seeking later
+    with open(dictionary_file_name, errors='ignore') as d, \
+        open(postings_file_name, 'rb') as p, \
+        open(queries_file_name) as q, \
+        open(output_file_name, 'w') as o, \
+        open(lengths_file_name, 'rb') as l, \
+        open(nltk_offsets_file_name) as i, \
+        open(nltk_texts_file_name, 'rb') as t:
+        # Build the offsets dictionaries for seeking later
         for line in d:
-            lemma, offset = line.rstrip().split(',')
-            offsets[lemma] = int(offset)
+            lemma, postings_offset = line.rstrip().split(',')
+            postings_offsets[lemma] = int(postings_offset)
+        for line in i:
+            doc_id, nltk_text_offset = line.rstrip().split(',')
+            nltk_text_offsets[doc_id] = int(nltk_text_offset)
         # Load the following data from the lengths file:
         # 1. Total number of documents in the collection
         # 2. Length of each document (key is the doc_id)
         N = pickle.load(l)
         lengths_by_document = pickle.load(l)
         # Process each query one-by-one but with the same resources
-        # I.e. Duplicate lemmas are loaded only once
+        # I.e. Duplicate lemmas and nltk.Text are loaded only once
         for line in q:
-            # TODO: Integrate zones and query expansion
             lemmas, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
+            # Get all synonyms for each query lemma
+            synonyms = { lemma: list(filter(
+                lambda synonym: synonym != lemma and '_' not in synonym,
+                set(sum(map(lambda synset: synset.lemma_names(), wn.synsets(lemma)), []))))
+            for lemma in lemmas }
             candidate_length, candidate_skip_list = boolean_retrieve(tokens_for_blr, p)
             query_tfs = Counter(tokens_for_vsm) # list of tokens -> {token: frequency}
             tfidf_by_document_upp = {}
@@ -177,8 +198,8 @@ def load_lemma(lemma, postings_file_object):
     if lemma in dictionary:
         return dictionary[lemma]
     postings = SkipList()
-    if lemma in offsets:
-        postings_file_object.seek(offsets[lemma])
+    if lemma in postings_offsets:
+        postings_file_object.seek(postings_offsets[lemma])
         postings.build_from(pickle.load(postings_file_object))
     dictionary[lemma] = (postings.get_length(), postings)
     return dictionary[lemma]
