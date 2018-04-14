@@ -13,24 +13,56 @@ Give an overview of your program, describe the important algorithms/steps
 in your program, and discuss your experiments in general.  A few paragraphs 
 are usually sufficient.
 
-The indexing script is largely similar to Assignment 2's. However, I also store N, the total number of documents in the Reuters collection, and the document length for each document (the key is the doc id). We need N to calculate the idf value (given by log10(N / df)), and we need the length of each document to do length normalization on the dot product of the tfidf of document and query. Without normalization, very long documents will become the most relevant documents by default.
+I assume the reader has sufficient knowledge about my boolean retrieval and vector space model systems back from Assignment 2 and 3.
 
-I also allow repeated stems in each document. This is done by removing the set() calls in the text preprocessing function. (In the boolean retrieval model, I removed duplicates because we were only concerned about presence versus absence.) This allows the tf to be retrieved in search.py. As such, instead of {term: (df, skip list where data=doc_id)}, we have {term: (df, skip list where data=(doc_id, tf))}.
+For Assignment 4, the general procedure is this:
 
-As for search.py, the main steps are as follows:
-
-1. Load the dictionary into memory. The variable is "offsets" and its format is {indexed stem: byte offset in postings.txt}.
-2. Load N, the total number of documents in the Reuters collection, and the lengths of each document into memory. The variable name for N is "N", and the document lengths are stored as lengths_by_document. The format for lengths_by_document is {document id: document length}. Note that the document length indexed here is equivalent to the total number of indexed stems from the document, and does not include the number of non-alphabetical expressions, stopwords, etc.
-3. For each query:
-    a. Process it into the form {stem: frequency} to get the tfidf values of the query.
-    b. Iterate through each stem in the query, and increment the dot product part of the document's tfidf and the query's tfidf. This is done by going through the entire postings skip list for each stem and storing the accumulated tfidf values in a separate dictionary (i.e. tfidf_by_document)
-    c. Negate and normalize the tfidf values from (b) accordingly. Negation is required because the heap built-in functionality for Python only allows min-heap, but we want highest tfidf first.
-    d. Heapify and pop up to top_n times (top_n is currently set to 10 in constants.py).
-    e. Write document ids to file
-
-The tfidf values are derived from a function. This function accepts tf, optional df, and optional N. The function first checks for the value of tf. If tf = 0, then tf_weight remains 0. Otherwise, tf = 1 + log10(1 + tf) as specified in w7 lecture. Then, the function will check for the df value. If df is not given, or if it is 0, the idf_weight remains 0 because df is a denominator in the idf formula and cannot be 0. Otherwise, idf = log10(N / df) where N is the total number of documents in the collection.
-
-For the query, the df argument is not supplied as it is equal to N (the collection is just the query itself). In addition, there is no need to normalize the query tfidf value as all other document tfidf values have this same multiplier. As we are more concerned about the ranking (relative rather than absolute), we only need to do: cosine_similarity(q, d) = tf(q) * tfidf(d) / len(d)
+1. Index the document_id and content columns of CSV file
+  - Each line of dictionary.txt is: (term),(byte offset in postings.txt)
+  - postings.txt contains skip lists of (doc_id, term frequency)
+  - lengths.txt contains an integer N, total number of documents in the collection, and
+    lengths_by_document, with the format { doc_id: number of significant tokens }
+    Significant tokens are tokens which are non-punctuation, fully alphabetical, and non-stopword
+  - Each line of offsets.txt is: (doc_id),(byte offset in texts.txt)
+  - texts.txt contains nltk.Text of every document that is pre-processed with
+    nltk.tokenize.word_tokenize only (non-significant tokens remain inside)
+  - Note that my terms are uni-lemma (not bi-word, not stem, etc)
+2. Parse the query
+  - If query contains 'AND' (case-sensitive) then it is a boolean retrieval query and will
+    undergo boolean retrieval
+  - Boolean retrieval queries with phrases are treated the same way as:
+    (phrase word 1) AND (phrase word 2) AND ...
+  - Otherwise the query will be fed into the vector space retrieval model directly
+  - Queries that undergo boolean retrieval will yield a single postings skip list that is unranked,
+    these documents will be fed into the vector space retrieval model for ranking
+3. What if boolean retrieval yields an empty postings skip list?
+  - In my system, the documents which are fetched via boolean retrieval are assigned to the "high"
+    list. Those that are not fetched are relegated to the "low" list. The documents in these two
+    lists are then ranked separately. The output will be "high" + "low" list.
+  - Note that the documents in the "high" list are always considered to be more relevant than
+    every document in the "low" list.
+  - As such, there will always be documents returned.
+4. Pseudo relevance feedback + query expansion
+  - I implemented the manual thesaurus-based query expansion (WordNet) and I also implemented
+  the term-term co-occurrence query expansion by enhancing the former.
+  - The manual thesaurus-based query expansion is as follows:
+    - For each lemma in the query, get the synsets from WordNet
+    - Get the lemmas for these synsets and remove duplicates
+    - Add all these lemmas to the original query
+    - In my opinion, we should restrict the number / percentage of new lemmas to be added, but
+      I have not experimented to get the best number because I am currently not able to assess
+      the effectiveness of my system
+    - However, this number / percentage ought to be small, so as to balance expansion and drifting
+  - The term-term co-occurrence query expansion is an upgrade of the manual thesaurus-based method:
+    - Before adding the synset lemmas blindly, fetch the nltk.Text of the top k relevant documents
+      from the index
+    - k ought to be small (in my program, I did not set k)
+    - This means that 1 round of retrieval should be done before expanding the query
+    - Get the union of terms across the top k documents that co-occur with each query lemma
+    - Intersect the co-occurred terms with the synonyms from WordNet
+    - Add the intersection minus (terms in the original query) to the original query
+    - We need to do the minus-ing because terms in the original query might re-appear in the
+      synonym / co-occurrence sets across different documents that are relevant
 
 == Files included with this submission ==
 
@@ -39,10 +71,11 @@ description of each file.  Make sure your submission's files are named
 and formatted correctly.
 
 1. index.py: Script to index documents into {term: (df, postings)}. Also stores additional information (i.e. total number of documents in collection, document lengths) for the vector space model.
-2. search.py: Script to do ranked retrieval by calculating the tfidf values of each document and their cosine similarities w.r.t query.
+2. search.py: Script to do boolean retrieval + ranked retrieval in succession (if the former returns non-empty postings skip list) by calculating the tfidf values of each document and their cosine similarities w.r.t query.
 3. skip_list.py: A module which contains the SkipList and SkipListNode classes. SkipList can contain a SkipListNode, which can be linked with more SkipListNode.
 4. constants.py: A module which contains constants (e.g. magic numbers and strings) that are shared across source files. An examples would be the file name of file storing the document lengths.
-6. cli_output.txt: A sample log file of the command line output.
+5. cli_output.txt: A sample log file of the command line output.
+6. BONUS.docx: For bonus
 
 == Statement of individual work ==
 
@@ -68,8 +101,8 @@ I suggest that I should be graded as follows:
 <Please list any websites and/or people you consulted with for this
 assignment and state their role>
 
-I did this assignment by myself code-wise, but I consulted the following sources for formulae and API:
+I did this assignment by myself code-wise for the indexing and retrieval parts, but I consulted the following sources for formulae, API, and adaptation of code for debugging / NLP tasks:
 
 - [CS3245 Lecture Notes](http://www.comp.nus.edu.sg/~zhaojin/cs3245_2018/syllabus.html) for the tfidf formulae and the cosineScore(q) algorithm
-- [Python 3.6.4 documentation](https://docs.python.org/3/) for general built-in function help and also on the collections.Counter and heapq libraries
-- [NumPy reference](https://docs.scipy.org/doc/numpy/reference/index.html) but afterwards I realized I no longer needed matrix operations as it is more space-saving to evaluate values while iterating instead of accumulating them into a matrix
+- [Debugging _csv.Error: field larger than field limit](https://stackoverflow.com/a/15063941)
+- [Reading, using, and copying code from nltk.Text for adaptation](http://www.nltk.org/_modules/nltk/text.html)
