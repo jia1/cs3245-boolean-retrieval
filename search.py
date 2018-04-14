@@ -101,13 +101,13 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             else:
                 relevant_docs = less_relevant_docs
 
-            query_expansion = set()
-            for lemma, synonyms in synonyms_by_lemma.items():
-                for doc_id in relevant_docs:
-                    nltk_text = load_nltk_text(doc_id, t)
-                    sim_words = set(get_similar(nltk_text, lemma))
-                    query_expansion.update(sim_words.intersection(synonyms))
+            # Manual thesaurus-based query expansion: Synonym lookup via WordNet
+            # query_expansion = set(sum(synonyms_by_lemma.values(), []))
+
+            # Semi-automatic thesaurus-based query expansion:
+            # Synonym lookup via WordNet + co-occurrence filter on synonyms
             # query_expansion may contain terms already in the original query, hence we call .difference
+            query_expansion = get_query_expansion(relevant_docs)
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
             # END procedure
@@ -201,6 +201,16 @@ def get_relevant_docs(blr_skip_list, lemmas, query_tfs, p):
             reverse=True)
         )
     return (most_relevant_docs, less_relevant_docs)
+
+# Document this function
+def get_query_expansion(relevant_docs, synonyms_by_lemma):
+    query_expansion = set()
+    for lemma, synonyms in synonyms_by_lemma.items():
+        for doc_id in relevant_docs:
+            nltk_text = load_nltk_text(doc_id, t)
+            sim_words = set(get_similar(nltk_text, lemma))
+            query_expansion.update(sim_words.intersection(synonyms))
+    return query_expansion
 
 '''
 Boolean retrieval routine (AND only)
