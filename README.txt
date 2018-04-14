@@ -64,6 +64,12 @@ For Assignment 4, the general procedure is this:
     - Add the intersection minus (terms in the original query) to the original query
     - We need to do the minus-ing because terms in the original query might re-appear in the
       synonym / co-occurrence sets across different documents that are relevant
+5. Zones
+    - title, date_posted, and court are indexed into a local sqlite database
+      (need to un-comment the database connection, execution and commit code)
+    - However, queries for these should follow a special format, out of scope of this assignment
+      E.g. title:(some title) instead of the normal word and phrasal queries
+    - As such, I have not created the database fetch queries
 
 == Files included with this submission ==
 
