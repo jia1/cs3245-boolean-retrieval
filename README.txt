@@ -13,7 +13,8 @@ Give an overview of your program, describe the important algorithms/steps
 in your program, and discuss your experiments in general.  A few paragraphs 
 are usually sufficient.
 
-I assume the reader has sufficient knowledge about my boolean retrieval and vector space model systems back from Assignment 2 and 3.
+I assume the reader has sufficient knowledge about my boolean retrieval and vector space model
+systems back from Assignment 2 and 3.
 
 For Assignment 4, the general procedure is this:
 
@@ -70,10 +71,16 @@ List the files in your submission here and provide a short 1 line
 description of each file.  Make sure your submission's files are named
 and formatted correctly.
 
-1. index.py: Script to index documents into {term: (df, postings)}. Also stores additional information (i.e. total number of documents in collection, document lengths) for the vector space model.
-2. search.py: Script to do boolean retrieval + ranked retrieval in succession (if the former returns non-empty postings skip list) by calculating the tfidf values of each document and their cosine similarities w.r.t query.
-3. skip_list.py: A module which contains the SkipList and SkipListNode classes. SkipList can contain a SkipListNode, which can be linked with more SkipListNode.
-4. constants.py: A module which contains constants (e.g. magic numbers and strings) that are shared across source files. An examples would be the file name of file storing the document lengths.
+1. index.py: Script to index documents into {term: (df, postings)}.
+  - Also stores additional information (i.e. total number of documents in collection,
+    document lengths) for the vector space model.
+2. search.py: Script to do boolean retrieval + ranked retrieval in succession
+  - Applicable if the former returns non-empty postings skip list
+  - Otherwise, just pure vector space retrieval
+3. skip_list.py: A module which contains the SkipList and SkipListNode classes.
+  - SkipList can contain a SkipListNode, which can be linked with more SkipListNode.
+4. constants.py: A module which contains constants (e.g. magic numbers and strings) shared
+    across source files E.g. file name of file storing the document lengths
 5. cli_output.txt: A sample log file of the command line output.
 6. BONUS.docx: For bonus
 
@@ -101,8 +108,11 @@ I suggest that I should be graded as follows:
 <Please list any websites and/or people you consulted with for this
 assignment and state their role>
 
-I did this assignment by myself code-wise for the indexing and retrieval parts, but I consulted the following sources for formulae, API, and adaptation of code for debugging / NLP tasks:
+I did this assignment by myself code-wise for the indexing and retrieval parts, but I consulted the
+following sources for formulae, API, and adaptation of code for debugging / NLP tasks:
 
-- [CS3245 Lecture Notes](http://www.comp.nus.edu.sg/~zhaojin/cs3245_2018/syllabus.html) for the tfidf formulae and the cosineScore(q) algorithm
+- [CS3245 Lecture Notes](http://www.comp.nus.edu.sg/~zhaojin/cs3245_2018/syllabus.html)
+  for the tfidf formulae and the cosineScore(q) algorithm
 - [Debugging _csv.Error: field larger than field limit](https://stackoverflow.com/a/15063941)
-- [Reading, using, and copying code from nltk.Text for adaptation](http://www.nltk.org/_modules/nltk/text.html)
+- [Reading, using, and copying code from nltk.Text for adaptation]
+  (http://www.nltk.org/_modules/nltk/text.html)
