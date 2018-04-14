@@ -202,13 +202,17 @@ def get_relevant_docs(blr_skip_list, lemmas, query_tfs, p):
         )
     return (most_relevant_docs, less_relevant_docs)
 
-# Document this function
+'''
+Query expansion procedure abstracted
+Accepts a list of relevant docs i.e. [doc_id] and { lemma: [synonyms] } and
+Returns a set of terms to expand the original query with
+'''
 def get_query_expansion(relevant_docs, synonyms_by_lemma):
     query_expansion = set()
     for lemma, synonyms in synonyms_by_lemma.items():
         for doc_id in relevant_docs:
             nltk_text = load_nltk_text(doc_id, t)
-            sim_words = set(get_similar(nltk_text, lemma))
+            sim_words = set(get_similar(nltk_text, lemma)) # co-occurrence
             query_expansion.update(sim_words.intersection(synonyms))
     return query_expansion
 
