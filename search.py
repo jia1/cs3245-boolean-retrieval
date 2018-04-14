@@ -76,6 +76,17 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             lemmas, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
 
+            # Get all synonyms for each query lemma
+            synonyms_by_lemma = { lemma: list(filter(
+                lambda synonym: synonym != lemma and '_' not in synonym,
+                set(sum(
+                    map(
+                        lambda synset: list(map(str.lower, synset.lemma_names())),
+                        wn.synsets(lemma)),
+                    [])
+                )))
+            for lemma in lemmas }
+
             # Do boolean retrieval first to separate high list (retrieved) from low list
             blr_length, blr_skip_list = boolean_retrieve(tokens_for_blr, p)
             query_tfs = Counter(tokens_for_vsm) # list of tokens -> {token: frequency}
@@ -85,24 +96,19 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 blr_skip_list, lemmas, query_tfs,  p)
 
             # BEGIN procedure for query expansion
-            # Get all synonyms for each query lemma
-            synonyms_by_lemma = { lemma: filter(
-                lambda synonym: synonym != lemma and '_' not in synonym,
-                set(sum(map(lambda synset: synset.lemma_names(), wn.synsets(lemma)), [])))
-            for lemma in lemmas }
-
             if most_relevant_docs:
                 relevant_docs = most_relevant_docs
             else:
                 relevant_docs = less_relevant_docs
 
-            query_expansion = []
+            query_expansion = set()
             for lemma, synonyms in synonyms_by_lemma.items():
                 for doc_id in relevant_docs:
                     nltk_text = load_nltk_text(doc_id, t)
                     sim_words = set(get_similar(nltk_text, lemma))
-                    query_expansion.extend(sim_words.intersection(synonyms))
-            tokens_for_vsm.extend(query_expansion)
+                    query_expansion.update(sim_words.intersection(synonyms))
+            # query_expansion may contain terms already in the original query, hence we call .difference
+            tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
             # END procedure
 
