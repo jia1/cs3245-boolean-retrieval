@@ -44,26 +44,7 @@ For Assignment 4, the general procedure is this:
     every document in the "low" list.
   - As such, there will always be documents returned.
 4. Pseudo relevance feedback + query expansion
-  - I implemented the manual thesaurus-based query expansion (WordNet) and I also implemented
-  the term-term co-occurrence query expansion by enhancing the former.
-  - The manual thesaurus-based query expansion is as follows:
-    - For each lemma in the query, get the synsets from WordNet
-    - Get the lemmas for these synsets and remove duplicates
-    - Add all these lemmas to the original query
-    - In my opinion, we should restrict the number / percentage of new lemmas to be added, but
-      I have not experimented to get the best number because I am currently not able to assess
-      the effectiveness of my system
-    - However, this number / percentage ought to be small, so as to balance expansion and drifting
-  - The term-term co-occurrence query expansion is an upgrade of the manual thesaurus-based method:
-    - Before adding the synset lemmas blindly, fetch the nltk.Text of the top k relevant documents
-      from the index
-    - k ought to be small (in my program, I did not set k)
-    - This means that 1 round of retrieval should be done before expanding the query
-    - Get the union of terms across the top k documents that co-occur with each query lemma
-    - Intersect the co-occurred terms with the synonyms from WordNet
-    - Add the intersection minus (terms in the original query) to the original query
-    - We need to do the minus-ing because terms in the original query might re-appear in the
-      synonym / co-occurrence sets across different documents that are relevant
+  - Please refer to the BONUS document for more information
 5. Zones
     - title, date_posted, and court are indexed into a local sqlite database
       (need to un-comment the database connection, execution and commit code)
