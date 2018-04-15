@@ -101,13 +101,20 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             else:
                 relevant_docs = less_relevant_docs
 
-            # Manual thesaurus-based query expansion: Synonym lookup via WordNet
+            # 1. Manual thesaurus-based query expansion: Synonym lookup via WordNet
             # query_expansion = set(sum(synonyms_by_lemma.values(), []))
 
-            # Semi-automatic thesaurus-based query expansion:
+            # 2. Automatic thesaurus-based query expansion:
+            # Pure co-occurrence values (but need to determine threshold to accept the new word into the
+            # expanded query)
+            # query_expansion may contain terms already in the original query, hence we call .difference
+            # query_expansion = get_query_expansion_auto(relevant_docs, lemmas)
+
+            # 3. Semi-automatic thesaurus-based query expansion:
             # Synonym lookup via WordNet + co-occurrence filter on synonyms
             # query_expansion may contain terms already in the original query, hence we call .difference
-            query_expansion = get_query_expansion(relevant_docs)
+            query_expansion = get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma)
+
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
             # END procedure
@@ -203,11 +210,25 @@ def get_relevant_docs(blr_skip_list, lemmas, query_tfs, p):
     return (most_relevant_docs, less_relevant_docs)
 
 '''
-Query expansion procedure abstracted
+Auto Query expansion procedure abstracted (Pure co-occurrence value comparison)
+Accepts a list of relevant docs i.e. [doc_id] and { lemmas } and
+Returns a set of terms to expand the original query with
+'''
+def get_query_expansion_auto(relevant_docs, lemmas):
+    query_expansion = set()
+    for lemma in lemmas:
+        for doc_id in relevant_docs:
+            nltk_text = load_nltk_text(doc_id, t)
+            sim_words = set(get_similar(nltk_text, lemma)) # co-occurrence
+            # TODO: Decide whether to add each of sim_words to expanded query here
+    return query_expansion
+
+'''
+Semi-auto Query expansion procedure abstracted (WordNet + co-occurrence filter)
 Accepts a list of relevant docs i.e. [doc_id] and { lemma: [synonyms] } and
 Returns a set of terms to expand the original query with
 '''
-def get_query_expansion(relevant_docs, synonyms_by_lemma):
+def get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma):
     query_expansion = set()
     for lemma, synonyms in synonyms_by_lemma.items():
         for doc_id in relevant_docs:
