@@ -78,9 +78,9 @@ class ParseTree:
         nodes = map(lambda data: ParseTreeNode(data=data), postfix_list)
         for node in nodes:
             token = node.get_data()
-            if token not in operators:
+            if token not in operators: # is operand
                 stack.append(node)
-            else:
+            else: # is operator
                 left_node = peek(stack, error='Insufficient number of operands')
                 left_node.set_parent(node)
                 node.set_left(left_node)

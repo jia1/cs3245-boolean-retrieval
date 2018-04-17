@@ -32,20 +32,19 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             query = line.rstrip().lower()
             stems, stemmed_postfix_query = parse_query(query) # string to list in postfix form
-            parse_tree = build_tree(stemmed_postfix_query, p) # list to parse tree
+            parse_tree = build_tree(stemmed_postfix_query, p) # list to parse tree of skip lists
             root_node = parse_tree.get_root()
             while root_node is not None and root_node.is_operator():
                 operand_nodes = parse_tree.get_sorted_operands(comparator=lambda node: node.get_data().get_length())
-                # Recall that node.data is (number of postings, postings skip list) and as such the
-                # comparator compares nodes by the number of postings (tuple comparison is done by
-                # comparing the first element unless otherwise specified)
+                # Recall that node.data is a SkipList and as such the comparator compares nodes by
+                # the number of postings (node.get_data().get_length())
                 index = 0
                 while index < len(operand_nodes): # a loop to evaluate the smallest operand possible
                     operand_node = operand_nodes[index]
                     operator_node = operand_node.get_parent()
                     operator = operator_node.get_data()
                     if operator_node.is_unary_operator():
-                        key, operand = operand_node.get_data()
+                        operand = operand_node.get_data()
                         operation = unary_operations[operator] # e.g. NOT
                         skip_list = operation(operand, p)
                     else: # operator_node.is_binary_operator()
@@ -57,17 +56,17 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                             # smallest number of postings
                             index += 1
                             continue
-                        key_a, operand_a = operand_node_a.get_data() # key_* is the number of postings
-                        key_b, operand_b = operand_node_b.get_data()
+                        operand_a = operand_node_a.get_data()
+                        operand_b = operand_node_b.get_data()
                         operation = binary_operations[operator] # e.g. AND, OR
                         skip_list = operation(operand_a, operand_b)
                     # Mutate the subtree root (an operator) into the new evaluated operand (a leaf)
-                    operator_node.set_data((skip_list.get_length(), skip_list))
+                    operator_node.set_data(skip_list)
                     operator_node.set_left(None)
                     operator_node.set_right(None)
                     break
             if root_node is not None: # is an operand
-                final_length, final_skip_list = root_node.get_data()
+                final_skip_list = root_node.get_data()
                 final_postings_list = map(str, final_skip_list.to_list())
                 o.write(' '.join(final_postings_list))
             o.write('\n')
@@ -146,8 +145,8 @@ def build_tree(postfix_query, postings_file_object):
         if token in operators:
             postfix_expression.append(token)
         else:
-            postings_tuple = load_stem(token, postings_file_object)
-            postfix_expression.append(postings_tuple)
+            length, postings = load_stem(token, postings_file_object)
+            postfix_expression.append(postings)
     tree = ParseTree()
     tree.build_from(postfix_expression)
     return tree
