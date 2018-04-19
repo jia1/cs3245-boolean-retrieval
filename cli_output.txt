@@ -1,14 +1,21 @@
-(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python index.py -i ..\dataset\dataset.csv -d indexed\dictionary.txt -p indexed/postings.txt
-Time taken: 6164.24134 seconds
+C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>Scripts\activate.bat
+(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python index.py -i ..\dataset\dataset.csv -d dictionary.txt -p postings.txt
+Time taken: 5927.95651 seconds
 
-(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python search.py -d indexed\dictionary.txt -p indexed/postings.txt -q queries\q1.txt -o output-q1.txt
-Time taken: 1.05776 seconds
+(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python search.py -d dictionary.txt -p postings.txt -q queries\q1.txt -o output-q1.txt
+[nltk_data] Downloading package wordnet to
+[nltk_data]     C:\Users\Jiayee\AppData\Roaming\nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+Time taken: 1.26569 seconds
 
-(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python search.py -d indexed\dictionary.txt -p indexed/postings.txt -q queries\q2.txt -o output-q2.txt
-Time taken: 1.09831 seconds
+(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python search.py -d dictionary.txt -p postings.txt -q queries\q2.txt -o output-q2.txt
+[nltk_data] Downloading package wordnet to
+[nltk_data]     C:\Users\Jiayee\AppData\Roaming\nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+Time taken: 0.87504 seconds
 
-(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python search.py -d indexed\dictionary.txt -p indexed/postings.txt -q queries\q3.txt -o output-q3.txt
-Time taken: 8.91453 seconds
-
-(cs3245-boolean-retrieval) jiayee:cs3245-information-retrieval jiayee$ python3 index.py -i ../dataset/dataset.csv -d dictionary.txt -p postings.txt
-Time taken: 2154.93677 seconds
+(cs3245-boolean-retrieval) C:\Users\Jiayee\Documents\GitRepositories\cs3245-information-retrieval>python search.py -d dictionary.txt -p postings.txt -q queries\q3.txt -o output-q3.txt
+[nltk_data] Downloading package wordnet to
+[nltk_data]     C:\Users\Jiayee\AppData\Roaming\nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+Time taken: 9.35983 seconds
