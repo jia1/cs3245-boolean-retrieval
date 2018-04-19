@@ -12,6 +12,8 @@ from functools import reduce
 from math import log10
 from time import time
 
+nltk.download('wordnet')
+
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -56,16 +58,23 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, \
         open(output_file_name, 'w') as o, \
+        open(lengths_file_name, 'rb') as l:
+        # Comment the above line and uncomment the below block if doing query expansion
+        '''
         open(lengths_file_name, 'rb') as l, \
         open(nltk_offsets_file_name) as i, \
         open(nltk_texts_file_name, 'rb') as t:
+        '''
         # Build the offsets dictionaries for seeking later
         for line in d:
             lemma, postings_offset = line.rstrip().split(',')
             postings_offsets[lemma] = int(postings_offset)
-        for line in i:
-            doc_id, nltk_text_offset = line.rstrip().split(',')
-            nltk_offsets[doc_id] = int(nltk_text_offset)
+        # Uncomment the below block if doing query expansion
+        '''
+            for line in i:
+                doc_id, nltk_text_offset = line.rstrip().split(',')
+                nltk_offsets[doc_id] = int(nltk_text_offset)
+        '''
         # Load the following data from the lengths file:
         # 1. Total number of documents in the collection
         # 2. Length of each document (key is the doc_id)
@@ -76,16 +85,20 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             lemmas, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
 
+            # Uncomment the below block if doing query expansion
             # Get all synonyms for each query lemma
-            synonyms_by_lemma = { lemma: list(filter(
-                lambda synonym: synonym != lemma and '_' not in synonym,
-                set(sum(
-                    map(
-                        lambda synset: list(map(str.lower, synset.lemma_names())),
-                        wn.synsets(lemma)),
-                    [])
-                )))
-            for lemma in lemmas }
+            '''
+            if should_do_query_expansion:
+                synonyms_by_lemma = { lemma: list(filter(
+                    lambda synonym: synonym != lemma and '_' not in synonym,
+                    set(sum(
+                        map(
+                            lambda synset: list(map(str.lower, synset.lemma_names())),
+                            wn.synsets(lemma)),
+                        [])
+                    )))
+                for lemma in lemmas }
+            '''
 
             # Do boolean retrieval first to separate high list (retrieved) from low list
             blr_length, blr_skip_list = boolean_retrieve(tokens_for_blr, p)
@@ -95,6 +108,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
 
+            # Uncomment the below block if doing query expansion
+            '''
             # BEGIN procedure for query expansion
             if most_relevant_docs:
                 relevant_docs = most_relevant_docs
@@ -102,6 +117,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 relevant_docs = less_relevant_docs
 
             # 1. Manual thesaurus-based query expansion: Synonym lookup via WordNet
+            # If choosing this method, no need to run the search beforehand - just expand query
+            # immediately
             # query_expansion = set(sum(synonyms_by_lemma.values(), []))
 
             # 2. Automatic thesaurus-based query expansion:
@@ -118,12 +135,15 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
             # END procedure
+            '''
 
             # Get ranked high and low lists via vector space model, and expanded query
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
 
-            most_relevant_docs.extend(less_relevant_docs)
+            # Attempt to increase precision by reducing the number of less relevant documents
+            if not most_relevant_docs:
+                most_relevant_docs.extend(less_relevant_docs)
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
