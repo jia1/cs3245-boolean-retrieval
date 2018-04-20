@@ -59,7 +59,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         open(queries_file_name) as q, \
         open(output_file_name, 'w') as o, \
         open(lengths_file_name, 'rb') as l:
-        # Comment the above line and uncomment the below block if doing query expansion
+        # Comment the above line and uncomment the below block if doing semi-auto/auto query expansion
         '''
         open(lengths_file_name, 'rb') as l, \
         open(nltk_offsets_file_name) as i, \
@@ -69,7 +69,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in d:
             lemma, postings_offset = line.rstrip().split(',')
             postings_offsets[lemma] = int(postings_offset)
-        # Uncomment the below block if doing query expansion
+        # Uncomment the below block if doing semi-auto/auto query expansion
         '''
             for line in i:
                 doc_id, nltk_text_offset = line.rstrip().split(',')
@@ -85,20 +85,19 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         for line in q:
             lemmas, tokens_for_blr, tokens_for_vsm = get_parsed_query(line)
 
-            # Uncomment the below block if doing query expansion
+            # Uncomment the below block if doing any thesaurus-based query expansion
             # Get all synonyms for each query lemma
-            '''
-            if should_do_query_expansion:
-                synonyms_by_lemma = { lemma: list(filter(
-                    lambda synonym: synonym != lemma and '_' not in synonym,
-                    set(sum(
-                        map(
-                            lambda synset: list(map(str.lower, synset.lemma_names())),
-                            wn.synsets(lemma)),
-                        [])
-                    )))
-                for lemma in lemmas }
-            '''
+            # '''
+            synonyms_by_lemma = { lemma: list(filter(
+                lambda synonym: synonym != lemma and '_' not in synonym,
+                set(sum(
+                    map(
+                        lambda synset: list(map(str.lower, synset.lemma_names())),
+                        wn.synsets(lemma)),
+                    [])
+                )))
+            for lemma in lemmas }
+            # '''
 
             # Do boolean retrieval first to separate high list (retrieved) from low list
             blr_length, blr_skip_list = boolean_retrieve(tokens_for_blr, p)
@@ -108,8 +107,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
 
-            # Uncomment the below block if doing query expansion
-            '''
+            # Uncomment the below block if doing any thesaurus-based query expansion
+            # '''
             # BEGIN procedure for query expansion
             if most_relevant_docs:
                 relevant_docs = most_relevant_docs
@@ -119,7 +118,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             # 1. Manual thesaurus-based query expansion: Synonym lookup via WordNet
             # If choosing this method, no need to run the search beforehand - just expand query
             # immediately
-            # query_expansion = set(sum(synonyms_by_lemma.values(), []))
+            query_expansion = set(sum(synonyms_by_lemma.values(), []))
 
             # 2. Automatic thesaurus-based query expansion:
             # Pure co-occurrence values (but need to determine threshold to accept the new word into the
@@ -130,12 +129,12 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             # 3. Semi-automatic thesaurus-based query expansion:
             # Synonym lookup via WordNet + co-occurrence filter on synonyms
             # query_expansion may contain terms already in the original query, hence we call .difference
-            query_expansion = get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma)
+            # query_expansion = get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma)
 
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
             # END procedure
-            '''
+            # '''
 
             # Get ranked high and low lists via vector space model, and expanded query
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
