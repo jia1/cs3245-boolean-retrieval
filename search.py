@@ -141,8 +141,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 blr_skip_list, lemmas, query_tfs,  p)
 
             # Attempt to increase precision by reducing the number of less relevant documents
+            '''
             if not most_relevant_docs:
                 most_relevant_docs.extend(less_relevant_docs)
+            '''
+            most_relevant_docs.extend(less_relevant_docs)
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
