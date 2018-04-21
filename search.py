@@ -242,7 +242,7 @@ def get_query_expansion_auto(relevant_docs, lemmas):
         for doc_id in relevant_docs:
             nltk_text = load_nltk_text(doc_id, t)
             sim_words = set(get_similar(nltk_text, lemma)) # co-occurrence
-            # TODO: Decide whether to add each of sim_words to expanded query here
+            query_expansion.update(sim_words)
     return query_expansion
 
 '''
