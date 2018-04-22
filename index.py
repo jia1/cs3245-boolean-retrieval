@@ -30,6 +30,7 @@ from constants import (
 from skip_list import SkipList
 
 # Database for zones
+'''
 conn = sqlite3.connect(database_file_name)
 c = conn.cursor()
 c.execute('DROP TABLE IF EXISTS {}'.format(zones_table_name))
@@ -37,6 +38,7 @@ conn.commit()
 c.execute('CREATE TABLE {} (document_id INTEGER, title TEXT, date_posted TEXT, court TEXT)'
     .format(zones_table_name))
 conn.commit()
+'''
 
 # Adapted from: https://stackoverflow.com/a/15063941
 max_int = sys.maxsize
@@ -90,9 +92,11 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
                         bisect.insort(dictionary[lemma], posting_frequency_tuple)
                         seen_postings_by_lemma[lemma].add(posting)
             # END procedure
+            '''
             c.execute('INSERT INTO {} VALUES (?, ?, ?, ?)'.format(zones_table_name),
                 (document_id, title, date_posted, court))
     conn.commit()
+    '''
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for lemma in dictionary:
             d.write('{lemma},{offset}\n'.format(lemma=lemma, offset=p.tell()))
@@ -151,4 +155,4 @@ if input_directory_d == None or output_file_d == None or output_file_p == None:
 do_indexing(input_directory_d, output_file_d, output_file_p)
 stop_time = time()
 print_time(start_time, stop_time)
-conn.close()
+# conn.close()

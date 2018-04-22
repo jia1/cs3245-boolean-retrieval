@@ -108,7 +108,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 blr_skip_list, lemmas, query_tfs,  p)
 
             # Uncomment the below block if doing any thesaurus-based query expansion
-            # '''
+            '''
             # BEGIN procedure for query expansion
             if most_relevant_docs:
                 relevant_docs = most_relevant_docs
@@ -134,11 +134,11 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
             # END procedure
-            # '''
 
             # Get ranked high and low lists via vector space model, and expanded query
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
+            '''
 
             # Attempt to increase precision by reducing the number of less relevant documents
             '''
