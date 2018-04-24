@@ -39,12 +39,14 @@ For Assignment 4, the general procedure is this:
 3. What if boolean retrieval yields an empty postings skip list?
   - In my system, the documents which are fetched via boolean retrieval are assigned to the "high"
     list. Those that are not fetched are relegated to the "low" list. The documents in these two
-    lists are then ranked separately. The output will be "high" + "low" list.
+    lists are then ranked separately. The output is currently set to be "high" + "low" list.
   - Note that the documents in the "high" list are always considered to be more relevant than
     every document in the "low" list.
   - As such, there will always be documents returned.
 4. Pseudo relevance feedback + query expansion
   - Please refer to the BONUS document for more information
+  - I switched off query expansion because it requires an index of nltk.Text which takes up
+    too much storage.
 5. Zones
     - title, date_posted, and court are indexed into a local sqlite database
       (need to un-comment the database connection, execution and commit code)
@@ -68,8 +70,14 @@ and formatted correctly.
   - SkipList can contain a SkipListNode, which can be linked with more SkipListNode.
 4. constants.py: A module which contains constants (e.g. magic numbers and strings) shared
     across source files E.g. file name of file storing the document lengths
-5. cli_output.txt: A sample log file of the command line output.
-6. BONUS.docx: For bonus
+5. nltk_context_index.py: A nltk.Text dependency that was edited by myself to return values
+    instead of printing the values out (99% from nltk.Text)
+6. stopwords.txt: File containing one stopword per line
+7. cli_output.txt: A sample log file of the command line output.
+8. BONUS.docx: For bonus
+9. BONUS.pdf: BONUS.docx exported as PDF
+
+Indexes such as dictionary.txt, postings.txt, lengths.txt are on https://github.com/jia1/cs3245-information-retrieval
 
 == Statement of individual work ==
 
