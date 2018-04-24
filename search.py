@@ -12,7 +12,7 @@ from functools import reduce
 from math import log10
 from time import time
 
-# nltk.download('wordnet')
+nltk.download('wordnet')
 
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -58,18 +58,20 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
         open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, \
         open(output_file_name, 'w') as o, \
-        open(lengths_file_name, 'rb') as l, \
-        open(nltk_offsets_file_name) as i, \
-        open(nltk_texts_file_name, 'rb') as t:
+        open(lengths_file_name, 'rb') as l: # , \
+        # open(nltk_offsets_file_name) as i, \
+        # open(nltk_texts_file_name, 'rb') as t:
         # nltk_offsets_file_name and nltk_texts_file_name are for query expansion
         # Build the offsets dictionaries for seeking later
         for line in d:
             lemma, postings_offset = line.rstrip().split(',')
             postings_offsets[lemma] = int(postings_offset)
         # Uncomment the below block if doing semi-auto/auto query expansion
+        '''
         for line in i:
             doc_id, nltk_text_offset = line.rstrip().split(',')
             nltk_offsets[doc_id] = int(nltk_text_offset)
+        '''
         # Load the following data from the lengths file:
         # 1. Total number of documents in the collection
         # 2. Length of each document (key is the doc_id)
@@ -111,11 +113,13 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
 
             # 1. Manual thesaurus-based query expansion: Synonym lookup via WordNet
             # If choosing this method, no need to run the search beforehand - just expand query immediately
-            # query_expansion = set(sum(synonyms_by_lemma.values(), []))
+            query_expansion = set(sum(synonyms_by_lemma.values(), []))
 
+            '''
             top_k = max(100, len(relevant_docs) // 32) # max(magic number 100, magic percentage 3%)
             print('Total number of documents fetched: {}'.format(len(relevant_docs)))
             print('Expanding query with the top {} most relevant documents...'.format(top_k))
+            '''
 
             # 2. Automatic thesaurus-based query expansion:
             # Pure co-occurrence values (but need to determine threshold to accept the new word into the
@@ -126,7 +130,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             # 3. Semi-automatic thesaurus-based query expansion:
             # Synonym lookup via WordNet + co-occurrence filter on synonyms
             # query_expansion may contain terms already in the original query, hence we call .difference
-            query_expansion = get_query_expansion_semi_auto(relevant_docs[:top_k], synonyms_by_lemma, t)
+            # query_expansion = get_query_expansion_semi_auto(relevant_docs[:top_k], synonyms_by_lemma, t)
 
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
