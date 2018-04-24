@@ -7,6 +7,8 @@ import pickle
 import string
 import sqlite3
 
+import codecs # For submitting script as Python 2.7
+
 from collections import Counter
 from functools import reduce
 from math import log10
@@ -54,8 +56,8 @@ with open('stopwords.txt') as f:
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
     global N
     global lengths_by_document
-    with open(dictionary_file_name, errors='ignore') as d, \
-        open(postings_file_name, 'rb') as p, \
+    d = codecs.open(dictionary_file_name, errors='ignore')
+    with open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, \
         open(output_file_name, 'w') as o, \
         open(lengths_file_name, 'rb') as l:
@@ -149,6 +151,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
+    d.close()
 
 '''
 This is a procedure after boolean retrieval
