@@ -1,4 +1,5 @@
 ### NOT WRITTEN BY ME. FROM NLTK LIBRARY. SOURCE: http://www.nltk.org/_modules/nltk/text.html ###
+### REQUIRED BY search.py's get_similar function ###
 
 from nltk.probability import ConditionalFreqDist as CFD
 

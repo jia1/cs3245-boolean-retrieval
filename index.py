@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import nltk
 import sys
 import getopt
 
@@ -10,10 +11,10 @@ import pickle
 import csv
 import sqlite3
 
-import codecs # For submitting script as Python 2.7
-
 from collections import Counter
 from time import time
+
+nltk.download('wordnet')
 
 from nltk import Text
 from nltk.corpus import PlaintextCorpusReader
@@ -67,41 +68,38 @@ def do_indexing(csv_file_path, dictionary_file_name, postings_file_name):
     lengths_by_document = {}
     nltk_texts_by_document = {}
     seen_postings_by_lemma = {}
-    f = codecs.open(csv_file_path, 'r', errors='ignore')
-
-    reader = csv.reader(f)
-    # Get column headers and move read pointer
-    # filter(None) helps remove falsey columns (e.g. blank)
-    # columns expected value = ['document_id', 'title', 'content', 'date_posted', 'court']
-    columns = list(filter(None, next(reader)))
-    N = 0
-    for csv_row in reader: # Uncomment this line if not testing
-    # for i in range(100): # Comment this line if not testing
-        # csv_row = next(reader) # Comment this line if not testing
-        N += 1
-        document_id, title, content, date_posted, court = csv_row
-        # BEGIN procedure index content (i.e. vector space model indexing)
-        nltk_text, text_counter = get_preprocessed(content)
-        posting = int(document_id)
-        lengths_by_document[posting] = sum(text_counter.values())
-        nltk_texts_by_document[posting] = nltk_text
-        for lemma, frequency in text_counter.items():
-            posting_frequency_tuple = (posting, frequency)
-            if lemma not in dictionary:
-                dictionary[lemma] = [posting_frequency_tuple]
-                seen_postings_by_lemma[lemma] = set((posting,))
-            else:
-                if posting not in seen_postings_by_lemma[lemma]:
-                    bisect.insort(dictionary[lemma], posting_frequency_tuple)
-                    seen_postings_by_lemma[lemma].add(posting)
-        # END procedure
+    with open(csv_file_path, 'r', errors='ignore') as f:
+        reader = csv.reader(f)
+        # Get column headers and move read pointer
+        # filter(None) helps remove falsey columns (e.g. blank)
+        # columns expected value = ['document_id', 'title', 'content', 'date_posted', 'court']
+        columns = list(filter(None, next(reader)))
+        N = 0
+        for csv_row in reader: # Uncomment this line if not testing
+        # for i in range(100): # Comment this line if not testing
+            # csv_row = next(reader) # Comment this line if not testing
+            N += 1
+            document_id, title, content, date_posted, court = csv_row
+            # BEGIN procedure index content (i.e. vector space model indexing)
+            nltk_text, text_counter = get_preprocessed(content)
+            posting = int(document_id)
+            lengths_by_document[posting] = sum(text_counter.values())
+            nltk_texts_by_document[posting] = nltk_text
+            for lemma, frequency in text_counter.items():
+                posting_frequency_tuple = (posting, frequency)
+                if lemma not in dictionary:
+                    dictionary[lemma] = [posting_frequency_tuple]
+                    seen_postings_by_lemma[lemma] = set((posting,))
+                else:
+                    if posting not in seen_postings_by_lemma[lemma]:
+                        bisect.insort(dictionary[lemma], posting_frequency_tuple)
+                        seen_postings_by_lemma[lemma].add(posting)
+            # END procedure
+            '''
+            c.execute('INSERT INTO {} VALUES (?, ?, ?, ?)'.format(zones_table_name),
+                (document_id, title, date_posted, court))
+        conn.commit()
         '''
-        c.execute('INSERT INTO {} VALUES (?, ?, ?, ?)'.format(zones_table_name),
-            (document_id, title, date_posted, court))
-    conn.commit()
-    '''
-    f.close()
-
     with open(dictionary_file_name, 'w') as d, open(postings_file_name, 'wb') as p:
         for lemma in dictionary:
             d.write('{lemma},{offset}\n'.format(lemma=lemma, offset=p.tell()))

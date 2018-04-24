@@ -7,14 +7,12 @@ import pickle
 import string
 import sqlite3
 
-import codecs # For submitting script as Python 2.7
-
 from collections import Counter
 from functools import reduce
 from math import log10
 from time import time
 
-nltk.download('wordnet')
+# nltk.download('wordnet')
 
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -56,27 +54,22 @@ with open('stopwords.txt') as f:
 def do_searching(dictionary_file_name, postings_file_name, queries_file_name, output_file_name):
     global N
     global lengths_by_document
-    d = codecs.open(dictionary_file_name, errors='ignore')
-    with open(postings_file_name, 'rb') as p, \
+    with open(dictionary_file_name, errors='ignore') as d, \
+        open(postings_file_name, 'rb') as p, \
         open(queries_file_name) as q, \
         open(output_file_name, 'w') as o, \
-        open(lengths_file_name, 'rb') as l:
-        # Comment the above line and uncomment the below block if doing semi-auto/auto query expansion
-        '''
         open(lengths_file_name, 'rb') as l, \
         open(nltk_offsets_file_name) as i, \
         open(nltk_texts_file_name, 'rb') as t:
-        '''
+        # nltk_offsets_file_name and nltk_texts_file_name are for query expansion
         # Build the offsets dictionaries for seeking later
         for line in d:
             lemma, postings_offset = line.rstrip().split(',')
             postings_offsets[lemma] = int(postings_offset)
         # Uncomment the below block if doing semi-auto/auto query expansion
-        '''
-            for line in i:
-                doc_id, nltk_text_offset = line.rstrip().split(',')
-                nltk_offsets[doc_id] = int(nltk_text_offset)
-        '''
+        for line in i:
+            doc_id, nltk_text_offset = line.rstrip().split(',')
+            nltk_offsets[doc_id] = int(nltk_text_offset)
         # Load the following data from the lengths file:
         # 1. Total number of documents in the collection
         # 2. Length of each document (key is the doc_id)
@@ -89,7 +82,6 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
 
             # Uncomment the below block if doing any thesaurus-based query expansion
             # Get all synonyms for each query lemma
-            # '''
             synonyms_by_lemma = { lemma: list(filter(
                 lambda synonym: synonym != lemma and '_' not in synonym,
                 set(sum(
@@ -99,7 +91,6 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                     [])
                 )))
             for lemma in lemmas }
-            # '''
 
             # Do boolean retrieval first to separate high list (retrieved) from low list
             blr_length, blr_skip_list = boolean_retrieve(tokens_for_blr, p)
@@ -109,29 +100,33 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
 
-            # Uncomment the below block if doing any thesaurus-based query expansion
-            '''
             # BEGIN procedure for query expansion
             if most_relevant_docs:
-                relevant_docs = most_relevant_docs
-            else:
-                relevant_docs = less_relevant_docs
+                if tokens_for_blr: # Is boolean query so include all
+                    relevant_docs = most_relevant_docs
+                else: # Not a boolean query so exclude some by a magic percentage (i.e. 50%)
+                    relevant_docs = most_relevant_docs[:(len(most_relevant_docs) // 2)]
+            else: # Not a boolean query too so exclude some by a magic percentage (i.e. 50%)
+                relevant_docs = less_relevant_docs[:(len(less_relevant_docs) // 2)]
 
             # 1. Manual thesaurus-based query expansion: Synonym lookup via WordNet
-            # If choosing this method, no need to run the search beforehand - just expand query
-            # immediately
-            query_expansion = set(sum(synonyms_by_lemma.values(), []))
+            # If choosing this method, no need to run the search beforehand - just expand query immediately
+            # query_expansion = set(sum(synonyms_by_lemma.values(), []))
+
+            top_k = max(100, len(relevant_docs) // 32) # max(magic number 100, magic percentage 3%)
+            print('Total number of documents fetched: {}'.format(len(relevant_docs)))
+            print('Expanding query with the top {} most relevant documents...'.format(top_k))
 
             # 2. Automatic thesaurus-based query expansion:
             # Pure co-occurrence values (but need to determine threshold to accept the new word into the
             # expanded query)
             # query_expansion may contain terms already in the original query, hence we call .difference
-            # query_expansion = get_query_expansion_auto(relevant_docs, lemmas)
+            # query_expansion = get_query_expansion_auto(relevant_docs[:top_k], lemmas, t)
 
             # 3. Semi-automatic thesaurus-based query expansion:
             # Synonym lookup via WordNet + co-occurrence filter on synonyms
             # query_expansion may contain terms already in the original query, hence we call .difference
-            # query_expansion = get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma)
+            query_expansion = get_query_expansion_semi_auto(relevant_docs[:top_k], synonyms_by_lemma, t)
 
             tokens_for_vsm.extend(query_expansion.difference(tokens_for_vsm))
             query_tfs = Counter(tokens_for_vsm)
@@ -140,18 +135,14 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             # Get ranked high and low lists via vector space model, and expanded query
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
-            '''
 
-            # Attempt to increase precision by reducing the number of less relevant documents
-            '''
-            if not most_relevant_docs:
-                most_relevant_docs.extend(less_relevant_docs)
-            '''
-            most_relevant_docs.extend(less_relevant_docs)
+            # Only include documents which fail the boolean retrieval phase if:
+            # Is not boolean query and all documents fail boolean retrieval
+            if not tokens_for_blr and not most_relevant_docs:
+                most_relevant_docs.extend(less_relevant_docs[:(len(less_relevant_docs) // 2)]) # magic filter
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
-    d.close()
 
 '''
 This is a procedure after boolean retrieval
@@ -238,8 +229,9 @@ def get_relevant_docs(blr_skip_list, lemmas, query_tfs, p):
 Auto Query expansion procedure abstracted (Pure co-occurrence value comparison)
 Accepts a list of relevant docs i.e. [doc_id] and { lemmas } and
 Returns a set of terms to expand the original query with
+t is the file handler for the binary file containing all nltk.Text
 '''
-def get_query_expansion_auto(relevant_docs, lemmas):
+def get_query_expansion_auto(relevant_docs, lemmas, t):
     query_expansion = set()
     for lemma in lemmas:
         for doc_id in relevant_docs:
@@ -252,10 +244,13 @@ def get_query_expansion_auto(relevant_docs, lemmas):
 Semi-auto Query expansion procedure abstracted (WordNet + co-occurrence filter)
 Accepts a list of relevant docs i.e. [doc_id] and { lemma: [synonyms] } and
 Returns a set of terms to expand the original query with
+t is the file handler for the binary file containing all nltk.Text
 '''
-def get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma):
+def get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma, t):
+    print('Executing get_query_expansion_semi_auto...')
     query_expansion = set()
     for lemma, synonyms in synonyms_by_lemma.items():
+        print('Expanding query lemma:', lemma)
         for doc_id in relevant_docs:
             nltk_text = load_nltk_text(doc_id, t)
             sim_words = set(get_similar(nltk_text, lemma)) # co-occurrence
@@ -351,6 +346,7 @@ def get_tfidf_weight(tf, df=0, N=0):
         idf_weight = log10(N / df)
     return tf_weight * idf_weight
 
+### WARNING: I ONLY CHANGED THE RETURN TYPE, OTHERWISE WHOLESALE COPYING ###
 # Adapted from: http://www.nltk.org/_modules/nltk/text.html
 def get_similar(nltk_text, word, num=20):
     """
@@ -365,7 +361,9 @@ def get_similar(nltk_text, word, num=20):
     """
     if '_word_context_index' not in nltk_text.__dict__:
         nltk_text._word_context_index = ContextIndex(
-        nltk_text.tokens, filter=lambda x: x.isalpha(), key=lambda s: s.lower())
+            nltk_text.tokens,
+            filter=lambda x: x.isalpha(),
+            key=lambda s: s.lower())
     word = word.lower()
     wci = nltk_text._word_context_index._word_to_contexts
     if word in wci.conditions():

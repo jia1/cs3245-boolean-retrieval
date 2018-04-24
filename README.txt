@@ -45,14 +45,24 @@ For Assignment 4, the general procedure is this:
   - As such, there will always be documents returned.
 4. Pseudo relevance feedback + query expansion
   - Please refer to the BONUS document for more information
-  - I switched off query expansion because it requires an index of nltk.Text which takes up
-    too much storage.
+  - Semi-automatic query expansion is switched on
 5. Zones
     - title, date_posted, and court are indexed into a local sqlite database
       (need to un-comment the database connection, execution and commit code)
     - However, queries for these should follow a special format, out of scope of this assignment
       E.g. title:(some title) instead of the normal word and phrasal queries
     - As such, I have not created the database fetch queries
+
+In trying to gain as much precision as possible, under the assumption that the true ranking and computed ranking are of similar distribution, I added magic number limits on the returning document list. These limits
+also reduce the runtime. A possible improvement to such magic numbers would be to construct some function
+out of the number of documents in the collection (log N for example).
+
+The score for this system on the leaderboard is currently 0 due to runtime errors on the leaderboard machine.
+
+Score was 0.3 when indexing was to be done online, it then dropped to 0.22 when indexing was to be done offline. The score dropped to 0.12 after some amendments to the leaderboard system, but I was already plagued
+with a lot of runtime errors online ):
+
+A suggestion would be to accept answer files instead, but this also means people can copy the answers...
 
 == Files included with this submission ==
 
@@ -77,7 +87,7 @@ and formatted correctly.
 8. BONUS.docx: For bonus
 9. BONUS.pdf: BONUS.docx exported as PDF
 
-Indexes such as dictionary.txt, postings.txt, lengths.txt are on https://github.com/jia1/cs3245-information-retrieval
+Indexes such as dictionary.txt, postings.txt, lengths.txt are on https://github.com/jia1/cs3245-information-retrieval too
 
 == Statement of individual work ==
 
