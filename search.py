@@ -138,8 +138,12 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
 
             # Only include documents which fail the boolean retrieval phase if:
             # Is not boolean query and all documents fail boolean retrieval
+            '''
             if not tokens_for_blr and not most_relevant_docs:
                 most_relevant_docs.extend(less_relevant_docs[:(len(less_relevant_docs) // 2)]) # magic filter
+            '''
+            # Going for high recall
+            most_relevant_docs.extend(less_relevant_docs[:(len(less_relevant_docs) // 2)]) # magic filter
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
