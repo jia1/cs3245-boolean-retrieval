@@ -145,7 +145,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
                 most_relevant_docs.extend(less_relevant_docs[:(len(less_relevant_docs) // 2)]) # magic filter
             '''
             # Going for high recall
-            most_relevant_docs.extend(less_relevant_docs[:(len(less_relevant_docs) // 2)]) # magic filter
+            most_relevant_docs.extend(less_relevant_docs)
             o.write(' '.join(most_relevant_docs))
             o.write('\n')
             break # because 1 query per file
@@ -261,6 +261,7 @@ def get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma, t):
             nltk_text = load_nltk_text(doc_id, t)
             sim_words = set(get_similar(nltk_text, lemma)) # co-occurrence
             query_expansion.update(sim_words.intersection(synonyms))
+    print('Query expansion: {}'.format(str(query_expansion)))
     return query_expansion
 
 '''
