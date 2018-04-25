@@ -53,13 +53,16 @@ For Assignment 4, the general procedure is this:
       E.g. title:(some title) instead of the normal word and phrasal queries
     - As such, I have not created the database fetch queries
 
+As before, I only have uni-word indexes. Something that I would have wanted to try if time permitted would be frequent
+bi-word and tri-word indexes.
+
 In trying to gain as much precision as possible, under the assumption that the true rankings and computed rankings
 are of similar distribution, I added magic number limits on the returning document list. These limits also reduce the runtime. A possible improvement to such magic numbers would be to construct some function out of the number of
 documents in the collection (log N for example).
 
-Because the output logs were left public, I took a look at the logs of other teams. Seems like the better-performing
-systems simply fetch many documents (> 10,000). As such, I myself begin to prioritise recall, since I am having 0 due
-to 0 recall.
+But afterwards, because the output logs were left public, I took a look at the logs of other teams. Seems like the
+better-performing systems simply fetch many documents (> 10,000). As such, I myself begin to prioritise recall, since
+I am having some 0 due to 0 recall.
 
 == Files included with this submission ==
 

@@ -12,7 +12,7 @@ from functools import reduce
 from math import log10
 from time import time
 
-# nltk.download('wordnet')
+nltk.download('wordnet')
 
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -99,6 +99,7 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
             # Get ranked high and low lists via vector space model
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
                 blr_skip_list, lemmas, query_tfs,  p)
+            most_relevant_docs, less_relevant_docs = list(most_relevant_docs), list(less_relevant_docs)
 
             # BEGIN procedure for query expansion
             if most_relevant_docs:
@@ -134,7 +135,8 @@ def do_searching(dictionary_file_name, postings_file_name, queries_file_name, ou
 
             # Get ranked high and low lists via vector space model, and expanded query
             most_relevant_docs, less_relevant_docs = get_relevant_docs(
-                blr_skip_list, lemmas, query_tfs,  p)
+                blr_skip_list, lemmas, query_tfs, p)
+            most_relevant_docs, less_relevant_docs = list(most_relevant_docs), list(less_relevant_docs)
 
             # Only include documents which fail the boolean retrieval phase if:
             # Is not boolean query and all documents fail boolean retrieval
@@ -254,7 +256,7 @@ def get_query_expansion_semi_auto(relevant_docs, synonyms_by_lemma, t):
     print('Executing get_query_expansion_semi_auto...')
     query_expansion = set()
     for lemma, synonyms in synonyms_by_lemma.items():
-        print('Expanding query lemma:', lemma)
+        # print('Expanding query lemma:', lemma)
         for doc_id in relevant_docs:
             nltk_text = load_nltk_text(doc_id, t)
             sim_words = set(get_similar(nltk_text, lemma)) # co-occurrence
